@@ -1,0 +1,11 @@
+{
+  "domain": "daikinone",
+  "name": "Daikin One",
+  "version": "0.1.0",
+  "codeowners": [],
+  "documentation": "",
+  "iot_class": "cloud_polling",
+  "config_flow": true,
+  "dependencies": [],
+  "requirements": []
+}

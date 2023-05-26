@@ -1,0 +1,24 @@
+[project]
+name = "ha-daikin"
+version = "0.1.0"
+description = "Add a short description here"
+authors = [
+    { name = "Zach Langbert", email = "zach.langbert@gmail.com" }
+]
+dependencies = ["homeassistant~=2023.5.4"]
+readme = "README.md"
+requires-python = ">= 3.10"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.rye]
+managed = true
+dev-dependencies = ["setuptools~=67.8.0", "ruff~=0.0.270"]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.ruff]
+line-length = 100

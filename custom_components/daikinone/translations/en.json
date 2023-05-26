@@ -1,0 +1,17 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configure Daikin One",
+        "description": "Enter your Daikin One account credentials.",
+        "data": {
+          "email": "Email",
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "auth_failed": "Authentication failed, please check your credentials and try again. Check the logs for more info."
+    }
+  }
+}
