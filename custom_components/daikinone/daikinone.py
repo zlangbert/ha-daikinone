@@ -1,76 +1,110 @@
-import asyncio
 import copy
 import logging
 from dataclasses import dataclass
-from typing import Any
+from enum import Enum, auto
+from typing import Any, NamedTuple
 
 import aiohttp
 from aiohttp import ClientError
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import IntegrationError
+from pydantic import BaseModel
 
-from custom_components.daikinone.const import DAIKIN_API_URL_LOGIN, DAIKIN_API_URL_REFRESH_TOKEN, \
-    DAIKIN_API_URL_DEVICES, DAIKIN_API_URL_LOCATIONS, DAIKIN_API_URL_DEVICE_DATA
+from .const import DAIKIN_API_URL_LOGIN, DAIKIN_API_URL_REFRESH_TOKEN, \
+    DAIKIN_API_URL_LOCATIONS, DAIKIN_API_URL_DEVICE_DATA, DaikinThermostatMode, DaikinThermostatStatus
+from .exceptions import DaikinServiceException
 
 log = logging.getLogger(__name__)
 
 
-@dataclass
-class DaikinUserCredentials:
+class DaikinUserCredentials(NamedTuple):
     email: str
     password: str
 
 
-@dataclass
-class DaikinAuthTokens:
-    refresh: str
-    access: str
-
-
-@dataclass
-class DaikinLocation:
+class DaikinLocation(NamedTuple):
     id: str
     name: str
     address: str
 
 
-@dataclass
-class DaikinDevice:
+class DaikinEquipment(NamedTuple):
+    model: str
+    serial: str
+    control_software_version: str
+
+
+class DaikinThermostatCapability(Enum):
+    HEAT = auto()
+    COOL = auto()
+
+
+class DaikinThermostatSchedule(NamedTuple):
+    enabled: bool
+
+
+class DaikinThermostat(NamedTuple):
     id: str
     location_id: str
     name: str
     model: str
+    firmware: str
+    online: bool
+    capabilities: set[DaikinThermostatCapability]
+    mode: DaikinThermostatMode
+    status: DaikinThermostatStatus
+    schedule: DaikinThermostatSchedule
+    indoor_temperature: float
+    indoor_humidity: float
+    set_point_heat: float
+    set_point_heat_min: float
+    set_point_heat_max: float
+    set_point_cool: float
+    set_point_cool_min: float
+    set_point_cool_max: float
+    equipment: list[DaikinEquipment]
+
+
+class DaikinDeviceDataResponse(BaseModel):
+    id: str
+    locationId: str
+    name: str
+    model: str
+    firmware: str
+    online: bool
     data: dict[str, Any]
 
 
 class DaikinOne:
     """Manages connection to Daikin API and fetching device data"""
 
-    __tokens: DaikinAuthTokens | None = None
-    __authenticated: bool = False
+    @dataclass
+    class _AuthState:
+        authenticated: bool = False
+        refresh_token: str | None = None
+        access_token: str | None = None
+
+    __auth = _AuthState()
 
     __locations: dict[str, DaikinLocation] = dict()
-    __devices: dict[str, DaikinDevice] = dict()
+    __thermostats: dict[str, DaikinThermostat] = dict()
 
-    def __init__(self, hass: HomeAssistant, creds: DaikinUserCredentials):
-        self._hass = hass
+    def __init__(self, creds: DaikinUserCredentials):
         self.creds = creds
 
     async def update(self) -> None:
         await self.__refresh_locations()
-        await self.__refresh_devices()
+        await self.__refresh_thermostats()
 
     def get_locations(self) -> dict[str, DaikinLocation]:
         return copy.deepcopy(self.__locations)
 
-    def get_location(self, location_id: str) -> DaikinLocation | None:
+    def get_location(self, location_id: str) -> DaikinLocation:
         return self.__locations[location_id]
 
-    def get_device(self, device_id: str) -> DaikinDevice | None:
-        return self.__devices[device_id]
+    def get_thermostat(self, thermostat_id: str) -> DaikinThermostat:
+        return self.__thermostats[thermostat_id]
 
-    def get_devices(self) -> dict[str, DaikinDevice]:
-        return copy.deepcopy(self.__devices)
+    def get_thermostats(self) -> dict[str, DaikinThermostat]:
+        return copy.deepcopy(self.__thermostats)
 
     async def __refresh_locations(self):
         locations = await self.__req(DAIKIN_API_URL_LOCATIONS)
@@ -84,34 +118,54 @@ class DaikinOne:
         }
         log.info(f"Cached {len(self.__locations)} locations")
 
-    async def __refresh_devices(self):
-        devices = await self.__req(DAIKIN_API_URL_DEVICES)
+    async def __refresh_thermostats(self):
+        devices = await self.__req(DAIKIN_API_URL_DEVICE_DATA)
+        devices = [
+            DaikinDeviceDataResponse(**device)
+            for device in devices
+        ]
 
-        devices = await asyncio.gather(
-            *(
-                asyncio.create_task(
-                    self.__refresh_device(device),
-                    name=f"daikin device refresh {device['id']}",
-                )
-                for device in devices
-            )
-        )
-
-        self.__devices = {
-            device.id: device
+        self.__thermostats = {
+            device.id: self.__map_thermostat(device)
             for device in devices
         }
-        log.info(f"Cached {len(self.__devices)} devices")
 
-    async def __refresh_device(self, device) -> DaikinDevice:
-        data = await self.__req(DAIKIN_API_URL_DEVICE_DATA + f"/{device['id']}")
-        return DaikinDevice(
-            id=device["id"],
-            location_id=device["locationId"],
-            name=device["name"],
-            model=device["model"],
-            data=data,
+        log.info(f"Cached {len(self.__thermostats)} thermostats")
+
+    def __map_thermostat(self, payload: DaikinDeviceDataResponse) -> DaikinThermostat:
+        capabilities = set(DaikinThermostatCapability)
+        if payload.data["ctSystemCapHeat"]:
+            capabilities.add(DaikinThermostatCapability.HEAT)
+        if payload.data["ctSystemCapCool"]:
+            capabilities.add(DaikinThermostatCapability.COOL)
+
+        schedule = DaikinThermostatSchedule(
+            enabled=payload.data["schedEnabled"]
         )
+
+        thermostat = DaikinThermostat(
+            id=payload.id,
+            location_id=payload.locationId,
+            name=payload.name,
+            model=payload.model,
+            firmware=payload.firmware,
+            online=payload.online,
+            capabilities=capabilities,
+            mode=DaikinThermostatMode(payload.data["mode"]),
+            status=DaikinThermostatStatus(payload.data["equipmentStatus"]),
+            schedule=schedule,
+            indoor_temperature=payload.data["tempIndoor"],
+            indoor_humidity=payload.data["humIndoor"],
+            set_point_heat=payload.data["hspActive"],
+            set_point_heat_min=payload.data["EquipProtocolMinHeatSetpoint"],
+            set_point_heat_max=payload.data["EquipProtocolMaxHeatSetpoint"],
+            set_point_cool=payload.data["cspActive"],
+            set_point_cool_min=payload.data["EquipProtocolMinCoolSetpoint"],
+            set_point_cool_max=payload.data["EquipProtocolMaxCoolSetpoint"],
+            equipment=list()
+        )
+
+        return thermostat
 
     async def login(self) -> bool:
         """Log in to the Daikin API with the given credentials to auth tokens"""
@@ -147,8 +201,9 @@ class DaikinOne:
                         return False
 
                     # save token
-                    self.__tokens = DaikinAuthTokens(refresh=refresh_token, access=access_token)
-                    self.__authenticated = True
+                    self.__auth.refresh_token = refresh_token
+                    self.__auth.access_token = access_token
+                    self.__auth.authenticated = True
 
                     return True
 
@@ -158,7 +213,7 @@ class DaikinOne:
 
     async def __refresh_token(self) -> bool:
         log.debug("Refreshing access token")
-        if self.__authenticated is not True:
+        if self.__auth.authenticated is not True:
             await self.login()
 
         async with aiohttp.ClientSession(
@@ -171,12 +226,13 @@ class DaikinOne:
                     url=DAIKIN_API_URL_REFRESH_TOKEN,
                     json={
                         "email": self.creds.email,
-                        "refreshToken": self.creds.password
+                        "refreshToken": self.__auth.refresh_token
                     }
             ) as response:
 
                 if response.status != 200:
                     log.error(f"Request to refresh access token: {response}")
+                    self.__auth.authenticated = False
                     return False
 
                 payload = await response.json()
@@ -184,24 +240,26 @@ class DaikinOne:
 
                 if access_token is None:
                     log.error("No access token found in refresh response")
+                    self.__auth.authenticated = False
                     return False
 
                 # save token
-                self.__tokens.access = access_token
-                self.__authenticated = True
+                log.info("Refreshed access token")
+                self.__auth.access_token = access_token
+                self.__auth.authenticated = True
 
                 return True
 
     async def __req(self, url: str, retry: bool = True) -> Any:
 
-        if self.__authenticated is not True:
+        if self.__auth.authenticated is not True:
             await self.login()
 
         log.debug(f"Sending request to Daikin API: GET {url}")
         async with aiohttp.ClientSession(
                 headers={
                     "Accept": "application/json",
-                    "Authorization": f"Bearer {self.__tokens.access}"
+                    "Authorization": f"Bearer {self.__auth.access_token}"
                 }
         ) as session:
             async with session.get(url) as response:
@@ -214,4 +272,4 @@ class DaikinOne:
                         await self.__refresh_token()
                         return await self.__req(url, retry=False)
 
-        raise IntegrationError(f"Failed to send request to Daikin API: GET {url}")
+        raise DaikinServiceException(f"Failed to send request to Daikin API: GET {url}")

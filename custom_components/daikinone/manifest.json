@@ -2,7 +2,7 @@
   "domain": "daikinone",
   "name": "Daikin One",
   "version": "0.1.0",
-  "codeowners": [],
+  "codeowners": ["@zlangbert"],
   "documentation": "",
   "iot_class": "cloud_polling",
   "config_flow": true,

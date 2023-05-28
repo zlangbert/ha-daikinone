@@ -35,6 +35,7 @@ markupsafe==2.1.2
 multidict==6.0.4
 orjson==3.8.10
 pycparser==2.21
+pydantic==1.10.8
 pyjwt==2.6.0
 pyopenssl==23.1.0
 python-slugify==4.0.1

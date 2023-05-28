@@ -20,7 +20,7 @@ class DaikinOneData:
 
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
     async def update(self):
-        """Get the latest data from ecobee.com."""
+        """Get the latest data from Daikin cloud"""
         log.debug("Updating Daikin One data from cloud")
         await self.entry.async_create_task(self._hass, self.daikin.update())
 
@@ -28,11 +28,13 @@ class DaikinOneData:
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up the given config entry"""
 
+    log.info(f"Setting up Daikin One integration for {entry.data[CONF_EMAIL]}")
+
     # create daikin one connector
     data = DaikinOneData(
         hass,
         entry,
-        DaikinOne(hass, DaikinUserCredentials(entry.data[CONF_EMAIL], entry.data[CONF_PASSWORD]))
+        DaikinOne(DaikinUserCredentials(entry.data[CONF_EMAIL], entry.data[CONF_PASSWORD]))
     )
     await data.update()
     hass.data[DOMAIN] = data

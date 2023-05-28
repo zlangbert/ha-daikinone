@@ -1,0 +1,2 @@
+class DaikinServiceException(Exception):
+    pass

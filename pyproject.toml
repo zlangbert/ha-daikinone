@@ -1,11 +1,11 @@
 [project]
-name = "ha-daikin"
+name = "ha-daikinone"
 version = "0.1.0"
 description = "Add a short description here"
 authors = [
     { name = "Zach Langbert", email = "zach.langbert@gmail.com" }
 ]
-dependencies = ["homeassistant~=2023.5.4"]
+dependencies = ["homeassistant~=2023.5.4", "pydantic~=1.10.8"]
 readme = "README.md"
 requires-python = ">= 3.10"
 
@@ -15,7 +15,7 @@ build-backend = "hatchling.build"
 
 [tool.rye]
 managed = true
-dev-dependencies = ["setuptools~=67.8.0", "ruff~=0.0.270"]
+dev-dependencies = ["setuptools~=67.8.0", "ruff~=0.0.270", "pyright~=1.1.310"]
 
 [tool.hatch.metadata]
 allow-direct-references = true
