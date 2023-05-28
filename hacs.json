@@ -1,0 +1,5 @@
+{
+  "name": "Daikin One",
+  "domains": ["daikinone"],
+  "iot_class": ["Cloud Polling"]
+}
