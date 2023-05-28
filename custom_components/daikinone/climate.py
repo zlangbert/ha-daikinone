@@ -103,7 +103,7 @@ class DaikinOneThermostat(ClimateEntity):
     @property
     def target_temperature(self):
         match self._thermostat.mode:
-            case DaikinThermostatMode.HEAT | DaikinThermostatMode.AUX_HEAT:
+            case DaikinThermostatMode.HEAT, DaikinThermostatMode.AUX_HEAT:
                 return self._thermostat.set_point_heat
             case DaikinThermostatMode.COOL:
                 return self._thermostat.set_point_cool
@@ -173,14 +173,10 @@ class DaikinOneThermostat(ClimateEntity):
                 return HVACMode.OFF
 
     @property
-    def is_aux_heat(self):
-        return True
-
-    @property
     def hvac_action(self):
         return DAIKIN_THERMOSTAT_STATUS_TO_HASS[self._thermostat.status]
 
-    async def async_update(self) -> None:
+    async def async_update(self, no_throttle: bool = False) -> None:
         """Get the latest state of the sensor."""
-        await self._data.update()
+        await self._data.update(no_throttle=no_throttle)
         self._thermostat = self._data.daikin.get_thermostat(self._thermostat.id)

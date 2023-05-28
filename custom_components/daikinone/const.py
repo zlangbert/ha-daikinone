@@ -13,6 +13,8 @@ PLATFORMS = [
     Platform.SENSOR,
 ]
 
+DEVICE_CLASS_AIRFLOW = "airflow"
+
 MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=30)
 
 DAIKIN_API_URL_BASE = "https://api.daikinskyport.com"

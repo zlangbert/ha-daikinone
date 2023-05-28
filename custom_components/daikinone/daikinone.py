@@ -26,10 +26,18 @@ class DaikinLocation(NamedTuple):
     address: str
 
 
-class DaikinEquipment(NamedTuple):
+@dataclass
+class DaikinEquipment:
+    id: str
+    name: str
     model: str
     serial: str
     control_software_version: str
+
+
+@dataclass
+class DaikinAirHandler(DaikinEquipment):
+    current_airflow: int
 
 
 class DaikinThermostatCapability(Enum):
@@ -60,7 +68,7 @@ class DaikinThermostat(NamedTuple):
     set_point_cool: float
     set_point_cool_min: float
     set_point_cool_max: float
-    equipment: list[DaikinEquipment]
+    equipment: dict[str, DaikinEquipment]
 
 
 class DaikinDeviceDataResponse(BaseModel):
@@ -98,10 +106,10 @@ class DaikinOne:
         return copy.deepcopy(self.__locations)
 
     def get_location(self, location_id: str) -> DaikinLocation:
-        return self.__locations[location_id]
+        return copy.deepcopy(self.__locations[location_id])
 
     def get_thermostat(self, thermostat_id: str) -> DaikinThermostat:
-        return self.__thermostats[thermostat_id]
+        return copy.deepcopy(self.__thermostats[thermostat_id])
 
     def get_thermostats(self) -> dict[str, DaikinThermostat]:
         return copy.deepcopy(self.__thermostats)
@@ -162,10 +170,30 @@ class DaikinOne:
             set_point_cool=payload.data["cspActive"],
             set_point_cool_min=payload.data["EquipProtocolMinCoolSetpoint"],
             set_point_cool_max=payload.data["EquipProtocolMaxCoolSetpoint"],
-            equipment=list()
+            equipment=self.__map_equipment(payload)
         )
 
         return thermostat
+
+    def __map_equipment(self, payload: DaikinDeviceDataResponse) -> dict[str, DaikinEquipment]:
+        equipment: dict[str, DaikinEquipment] = {}
+
+        # air handler
+        if payload.data["ctAHUnitType"] < 255:
+            model = payload.data["ctAHModelNoCharacter1_15"].strip()
+            serial = payload.data["ctAHSerialNoCharacter1_15"].strip()
+            eid = f"{model}-{serial}"
+
+            equipment[eid] = DaikinAirHandler(
+                id=eid,
+                name="Air Handler",
+                model=model,
+                serial=serial,
+                control_software_version=payload.data["ctAHControlSoftwareVersion"].strip(),
+                current_airflow=payload.data["ctAHCurrentIndoorAirflow"]
+            )
+
+        return equipment
 
     async def login(self) -> bool:
         """Log in to the Daikin API with the given credentials to auth tokens"""

@@ -22,7 +22,7 @@ class DaikinOneData:
     async def update(self):
         """Get the latest data from Daikin cloud"""
         log.debug("Updating Daikin One data from cloud")
-        await self.entry.async_create_task(self._hass, self.daikin.update())
+        await self.daikin.update()
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
