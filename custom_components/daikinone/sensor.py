@@ -1,12 +1,11 @@
-import random
 from typing import Callable
 
-from homeassistant.const import UnitOfTemperature, EntityCategory
-from homeassistant.core import HomeAssistant
+from homeassistant.components.sensor import SensorEntity, SensorEntityDescription, SensorDeviceClass
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import EntityCategory
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.components.sensor import SensorEntity, SensorEntityDescription, SensorDeviceClass, SensorStateClass
 
 from custom_components.daikinone import DOMAIN, DaikinOneData
 from custom_components.daikinone.const import MANUFACTURER

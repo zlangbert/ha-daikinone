@@ -1,12 +1,17 @@
 import logging
 
+from homeassistant.components.climate import (
+    ClimateEntity,
+    ClimateEntityDescription,
+    HVACMode,
+    ClimateEntityFeature,
+    HVACAction
+)
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import TEMP_CELSIUS
 from homeassistant.core import HomeAssistant
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.components.climate import ClimateEntity, ClimateEntityDescription, HVACMode, ClimateEntityFeature, \
-    HVACAction
 
 from custom_components.daikinone import DaikinOneData, DOMAIN
 from custom_components.daikinone.const import DaikinThermostatMode, MANUFACTURER, DaikinThermostatStatus
@@ -98,9 +103,7 @@ class DaikinOneThermostat(ClimateEntity):
     @property
     def target_temperature(self):
         match self._thermostat.mode:
-            case DaikinThermostatMode.HEAT:
-                return self._thermostat.set_point_heat
-            case DaikinThermostatMode.AUX_HEAT:
+            case DaikinThermostatMode.HEAT | DaikinThermostatMode.AUX_HEAT:
                 return self._thermostat.set_point_heat
             case DaikinThermostatMode.COOL:
                 return self._thermostat.set_point_cool
@@ -139,7 +142,7 @@ class DaikinOneThermostat(ClimateEntity):
 
     @property
     def hvac_modes(self) -> list[HVACMode]:
-        modes: list[HVACMode] = [HVACMode.AUTO]
+        modes = [HVACMode.AUTO]
 
         if (DaikinThermostatCapability.HEAT in self._thermostat.capabilities and
                 DaikinThermostatCapability.COOL in self._thermostat.capabilities):

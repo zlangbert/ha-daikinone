@@ -1,6 +1,6 @@
 """Constants for the Daikin Skyport integration."""
 from datetime import timedelta
-from enum import Enum, auto
+from enum import Enum
 from urllib.parse import urljoin
 
 from homeassistant.const import Platform

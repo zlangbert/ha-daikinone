@@ -1,9 +1,9 @@
 import logging
 from dataclasses import dataclass
 
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
 from homeassistant.core import HomeAssistant
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.util import Throttle
 
 from custom_components.daikinone.const import PLATFORMS, DOMAIN, MIN_TIME_BETWEEN_UPDATES
