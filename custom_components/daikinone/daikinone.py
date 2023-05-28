@@ -40,6 +40,12 @@ class DaikinAirHandler(DaikinEquipment):
     current_airflow: int
 
 
+@dataclass
+class DaikinOutdoorUnit(DaikinEquipment):
+    inverter_software_version: str | None
+    fan_rpm: int
+
+
 class DaikinThermostatCapability(Enum):
     HEAT = auto()
     COOL = auto()
@@ -191,6 +197,26 @@ class DaikinOne:
                 serial=serial,
                 control_software_version=payload.data["ctAHControlSoftwareVersion"].strip(),
                 current_airflow=payload.data["ctAHCurrentIndoorAirflow"]
+            )
+
+        if payload.data["ctOutdoorUnitType"] < 255:
+            model = payload.data["ctOutdoorModelNoCharacter1_15"].strip()
+            serial = payload.data["ctOutdoorSerialNoCharacter1_15"].strip()
+            eid = f"{model}-{serial}"
+
+            # assume it can cool, and if it can also heat it should be a heat pump
+            name = "Condensing Unit"
+            if payload.data["ctOutdoorHeatMaxRPS"] != 0 and payload.data["ctOutdoorHeatMaxRPS"] != 65535:
+                name = "Heat Pump"
+
+            equipment[eid] = DaikinOutdoorUnit(
+                id=eid,
+                name=name,
+                model=model,
+                serial=serial,
+                control_software_version=payload.data["ctOutdoorControlSoftwareVersion"].strip(),
+                inverter_software_version=payload.data["ctOutdoorInverterSoftwareVersion"].strip(),
+                fan_rpm=payload.data["ctOutdoorFanRPM"]
             )
 
         return equipment

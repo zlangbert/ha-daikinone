@@ -11,7 +11,7 @@ from homeassistant.helpers.typing import StateType
 
 from custom_components.daikinone import DOMAIN, DaikinOneData
 from custom_components.daikinone.const import MANUFACTURER
-from custom_components.daikinone.daikinone import DaikinThermostat, DaikinAirHandler, DaikinEquipment
+from custom_components.daikinone.daikinone import DaikinThermostat, DaikinAirHandler, DaikinEquipment, DaikinOutdoorUnit
 
 log = logging.getLogger(__name__)
 
@@ -44,6 +44,7 @@ async def async_setup_entry(
     for thermostat in thermostats:
         for equipment in thermostat.equipment.values():
             match equipment:
+
                 case DaikinAirHandler():
                     entities += [
                         DaikinOneEquipmentSensor(
@@ -60,6 +61,24 @@ async def async_setup_entry(
                             attribute=lambda e: e.current_airflow
                         )
                     ]
+
+                case DaikinOutdoorUnit():
+                    entities += [
+                        DaikinOneEquipmentSensor(
+                            description=SensorEntityDescription(
+                                key="fan_rpm",
+                                name="Fan RPM",
+                                has_entity_name=True,
+                                state_class=SensorStateClass.MEASUREMENT,
+                                native_unit_of_measurement="rpm",
+                            ),
+                            data=data,
+                            thermostat=thermostat,
+                            equipment=equipment,
+                            attribute=lambda e: e.fan_rpm
+                        )
+                    ]
+
                 case _:
                     log.warning(f"unexpected equipment: {equipment}")
 
