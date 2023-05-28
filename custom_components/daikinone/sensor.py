@@ -42,7 +42,7 @@ async def async_setup_entry(
                 data=data,
                 thermostat=thermostat,
                 attribute=lambda d: "Online" if d.online else "Offline"
-            )
+            ),
         ]
 
         # equipment sensors
@@ -59,7 +59,7 @@ async def async_setup_entry(
                                 has_entity_name=True,
                                 state_class=SensorStateClass.MEASUREMENT,
                                 native_unit_of_measurement="cfm",
-                                icon="md:fan",
+                                icon="mdi:fan",
                             ),
                             data=data,
                             thermostat=thermostat,

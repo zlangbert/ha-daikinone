@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+
+  check:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+    - name: Install Rye
+      run: |
+        wget -qO /tmp/rye.gz https://github.com/mitsuhiko/rye/releases/latest/download/rye-x86_64-linux.gz
+        gunzip /tmp/rye.gz
+        chmod +x /tmp/rye
+        mv /tmp/rye /usr/local/bin/rye
+        mkdir -p $HOME/.rye
+        
+        echo "$HOME/.rye/shims" >> $GITHUB_PATH
+        rye --version
+        rye show
+    - name: Rye Sync
+      run: rye sync
+    - name: Type Check
+      run: rye run pyright
+    - name: Lint
+      run: rye run ruff check .
