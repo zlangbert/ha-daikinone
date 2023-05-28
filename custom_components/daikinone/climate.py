@@ -8,7 +8,7 @@ from homeassistant.components.climate import (
     HVACAction
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import TEMP_CELSIUS
+from homeassistant.const import UnitOfTemperature
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -94,50 +94,50 @@ class DaikinOneThermostat(ClimateEntity):
 
     @property
     def temperature_unit(self):
-        return TEMP_CELSIUS
+        return UnitOfTemperature.CELSIUS
 
     @property
-    def current_temperature(self):
-        return self._thermostat.indoor_temperature
+    def current_temperature(self) -> float | None:
+        return self._thermostat.indoor_temperature.celsius
 
     @property
-    def target_temperature(self):
+    def target_temperature(self) -> float | None:
         match self._thermostat.mode:
             case DaikinThermostatMode.HEAT, DaikinThermostatMode.AUX_HEAT:
-                return self._thermostat.set_point_heat
+                return self._thermostat.set_point_heat.celsius
             case DaikinThermostatMode.COOL:
-                return self._thermostat.set_point_cool
+                return self._thermostat.set_point_cool.celsius
 
         return None
 
     @property
-    def target_temperature_low(self):
+    def target_temperature_low(self) -> float | None:
         match self._thermostat.mode:
             case DaikinThermostatMode.AUTO:
-                return self._thermostat.set_point_heat
+                return self._thermostat.set_point_heat.celsius
 
         return None
 
     @property
-    def target_temperature_high(self):
+    def target_temperature_high(self) -> float | None:
         match self._thermostat.mode:
             case DaikinThermostatMode.AUTO:
-                return self._thermostat.set_point_cool
+                return self._thermostat.set_point_cool.celsius
 
         return None
 
     @property
-    def min_temp(self):
+    def min_temp(self) -> float:
         # these should be the same but just in case, take the larger of the two for the min
-        return max(self._thermostat.set_point_heat_min, self._thermostat.set_point_cool_min)
+        return max(self._thermostat.set_point_heat_min.celsius, self._thermostat.set_point_cool_min.celsius)
 
     @property
-    def max_temp(self):
+    def max_temp(self) -> float:
         # these should be the same but just in case, take the smaller of the two for the max
-        return min(self._thermostat.set_point_heat_max, self._thermostat.set_point_cool_max)
+        return min(self._thermostat.set_point_heat_max.celsius, self._thermostat.set_point_cool_max.celsius)
 
     @property
-    def current_humidity(self):
+    def current_humidity(self) -> int:
         return self._thermostat.indoor_humidity
 
     @property

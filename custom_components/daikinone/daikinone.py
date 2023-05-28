@@ -1,26 +1,29 @@
 import copy
 import logging
-from dataclasses import dataclass
 from enum import Enum, auto
-from typing import Any, NamedTuple
+from typing import Any
 
 import aiohttp
 from aiohttp import ClientError
 from pydantic import BaseModel
+from pydantic.dataclasses import dataclass
 
 from .const import DAIKIN_API_URL_LOGIN, DAIKIN_API_URL_REFRESH_TOKEN, \
     DAIKIN_API_URL_LOCATIONS, DAIKIN_API_URL_DEVICE_DATA, DaikinThermostatMode, DaikinThermostatStatus
 from .exceptions import DaikinServiceException
+from custom_components.daikinone.utils import Temperature
 
 log = logging.getLogger(__name__)
 
 
-class DaikinUserCredentials(NamedTuple):
+@dataclass
+class DaikinUserCredentials:
     email: str
     password: str
 
 
-class DaikinLocation(NamedTuple):
+@dataclass
+class DaikinLocation:
     id: str
     name: str
     address: str
@@ -44,6 +47,15 @@ class DaikinAirHandler(DaikinEquipment):
 class DaikinOutdoorUnit(DaikinEquipment):
     inverter_software_version: str | None
     fan_rpm: int
+    heat_demand_percent: int
+    cool_demand_percent: int
+    fan_demand_percent: int
+    dehumidify_demand_percent: int
+    air_temperature: Temperature
+    coil_temperature: Temperature
+    discharge_temperature: Temperature
+    liquid_temperature: Temperature
+    defrost_sensor_temperature: Temperature
 
 
 class DaikinThermostatCapability(Enum):
@@ -51,11 +63,13 @@ class DaikinThermostatCapability(Enum):
     COOL = auto()
 
 
-class DaikinThermostatSchedule(NamedTuple):
+@dataclass
+class DaikinThermostatSchedule:
     enabled: bool
 
 
-class DaikinThermostat(NamedTuple):
+@dataclass
+class DaikinThermostat:
     id: str
     location_id: str
     name: str
@@ -66,14 +80,14 @@ class DaikinThermostat(NamedTuple):
     mode: DaikinThermostatMode
     status: DaikinThermostatStatus
     schedule: DaikinThermostatSchedule
-    indoor_temperature: float
-    indoor_humidity: float
-    set_point_heat: float
-    set_point_heat_min: float
-    set_point_heat_max: float
-    set_point_cool: float
-    set_point_cool_min: float
-    set_point_cool_max: float
+    indoor_temperature: Temperature
+    indoor_humidity: int
+    set_point_heat: Temperature
+    set_point_heat_min: Temperature
+    set_point_heat_max: Temperature
+    set_point_cool: Temperature
+    set_point_cool_min: Temperature
+    set_point_cool_max: Temperature
     equipment: dict[str, DaikinEquipment]
 
 
@@ -168,14 +182,14 @@ class DaikinOne:
             mode=DaikinThermostatMode(payload.data["mode"]),
             status=DaikinThermostatStatus(payload.data["equipmentStatus"]),
             schedule=schedule,
-            indoor_temperature=payload.data["tempIndoor"],
+            indoor_temperature=Temperature.from_celsius(payload.data["tempIndoor"]),
             indoor_humidity=payload.data["humIndoor"],
-            set_point_heat=payload.data["hspActive"],
-            set_point_heat_min=payload.data["EquipProtocolMinHeatSetpoint"],
-            set_point_heat_max=payload.data["EquipProtocolMaxHeatSetpoint"],
-            set_point_cool=payload.data["cspActive"],
-            set_point_cool_min=payload.data["EquipProtocolMinCoolSetpoint"],
-            set_point_cool_max=payload.data["EquipProtocolMaxCoolSetpoint"],
+            set_point_heat=Temperature.from_celsius(payload.data["hspActive"]),
+            set_point_heat_min=Temperature.from_celsius(payload.data["EquipProtocolMinHeatSetpoint"]),
+            set_point_heat_max=Temperature.from_celsius(payload.data["EquipProtocolMaxHeatSetpoint"]),
+            set_point_cool=Temperature.from_celsius(payload.data["cspActive"]),
+            set_point_cool_min=Temperature.from_celsius(payload.data["EquipProtocolMinCoolSetpoint"]),
+            set_point_cool_max=Temperature.from_celsius(payload.data["EquipProtocolMaxCoolSetpoint"]),
             equipment=self.__map_equipment(payload)
         )
 
@@ -196,7 +210,7 @@ class DaikinOne:
                 model=model,
                 serial=serial,
                 control_software_version=payload.data["ctAHControlSoftwareVersion"].strip(),
-                current_airflow=payload.data["ctAHCurrentIndoorAirflow"]
+                current_airflow=payload.data["ctAHCurrentIndoorAirflow"],
             )
 
         if payload.data["ctOutdoorUnitType"] < 255:
@@ -216,7 +230,18 @@ class DaikinOne:
                 serial=serial,
                 control_software_version=payload.data["ctOutdoorControlSoftwareVersion"].strip(),
                 inverter_software_version=payload.data["ctOutdoorInverterSoftwareVersion"].strip(),
-                fan_rpm=payload.data["ctOutdoorFanRPM"]
+                fan_rpm=payload.data["ctOutdoorFanRPM"],
+                heat_demand_percent=round(payload.data["ctOutdoorHeatRequestedDemand"] / 2, 1),
+                cool_demand_percent=round(payload.data["ctOutdoorCoolRequestedDemand"] / 2, 1),
+                fan_demand_percent=round(payload.data["ctOutdoorFanRequestedDemandPercentage"] / 2, 1),
+                dehumidify_demand_percent=round(payload.data["ctOutdoorDeHumidificationRequestedDemand"] / 2, 1),
+                air_temperature=Temperature.from_fahrenheit(payload.data["ctOutdoorAirTemperature"] / 10),
+                coil_temperature=Temperature.from_fahrenheit(payload.data["ctOutdoorCoilTemperature"] / 10),
+                discharge_temperature=Temperature.from_fahrenheit(payload.data["ctOutdoorDischargeTemperature"] / 10),
+                liquid_temperature=Temperature.from_fahrenheit(payload.data["ctOutdoorLiquidTemperature"] / 10),
+                defrost_sensor_temperature=Temperature.from_fahrenheit(
+                    payload.data["ctOutdoorDefrostSensorTemperature"] / 10
+                ),
             )
 
         return equipment
