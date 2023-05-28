@@ -29,18 +29,20 @@ async def async_setup_entry(
     for thermostat in thermostats:
         # thermostat sensors
 
-        DaikinOneThermostatSensor(
-            description=SensorEntityDescription(
-                key="online",
-                name="Online Status",
-                has_entity_name=True,
-                device_class=SensorDeviceClass.ENUM,
-                entity_category=EntityCategory.DIAGNOSTIC
-            ),
-            data=data,
-            thermostat=thermostat,
-            attribute=lambda d: "Online" if d.online else "Offline"
-        )
+        entities += [
+            DaikinOneThermostatSensor(
+                description=SensorEntityDescription(
+                    key="online",
+                    name="Online Status",
+                    has_entity_name=True,
+                    device_class=SensorDeviceClass.ENUM,
+                    entity_category=EntityCategory.DIAGNOSTIC
+                ),
+                data=data,
+                thermostat=thermostat,
+                attribute=lambda d: "Online" if d.online else "Offline"
+            )
+        ]
 
         # equipment sensors
         for equipment in thermostat.equipment.values():
