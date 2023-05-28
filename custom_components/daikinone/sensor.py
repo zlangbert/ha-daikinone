@@ -58,7 +58,7 @@ async def async_setup_entry(
                                 has_entity_name=True,
                                 state_class=SensorStateClass.MEASUREMENT,
                                 native_unit_of_measurement="cfm",
-                                icon="md:fan"
+                                icon="md:fan",
                             ),
                             data=data,
                             thermostat=thermostat,
@@ -72,11 +72,12 @@ async def async_setup_entry(
                     entities += [
                         DaikinOneEquipmentSensor(
                             description=SensorEntityDescription(
-                                key="fan_rpm",
-                                name="Fan RPM",
+                                key="fan_speed",
+                                name="Fan Speed",
                                 has_entity_name=True,
                                 state_class=SensorStateClass.MEASUREMENT,
                                 native_unit_of_measurement="rpm",
+                                icon="md:fan",
                             ),
                             data=data,
                             thermostat=thermostat,
