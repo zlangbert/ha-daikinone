@@ -1,11 +1,10 @@
 {
   "domain": "daikinone",
   "name": "Daikin One",
-  "version": "0.1.0",
   "codeowners": ["@zlangbert"],
-  "documentation": "",
-  "iot_class": "cloud_polling",
   "config_flow": true,
-  "dependencies": [],
-  "requirements": []
+  "documentation": "https://github.com/zlangbert/ha-daikinone",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/zlangbert/ha-daikinone/issues",
+  "version": "0.1.0"
 }
