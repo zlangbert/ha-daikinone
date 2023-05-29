@@ -18,9 +18,16 @@ class DaikinOneData:
     entry: ConfigEntry
     daikin: DaikinOne
 
-    @Throttle(MIN_TIME_BETWEEN_UPDATES)
-    async def update(self):
+    async def update(self, no_throttle: bool = False) -> None:
         """Get the latest data from Daikin cloud"""
+        await self._update(no_throttle)  # type: ignore
+
+    @Throttle(MIN_TIME_BETWEEN_UPDATES)
+    async def _update(self) -> None:
+        """
+        @Throttle throws off the type checker so use internal implementation that can be type ignored in one place
+        instead of everywhere that calls update
+        """
         log.debug("Updating Daikin One data from cloud")
         await self.daikin.update()
 

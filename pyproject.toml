@@ -15,10 +15,19 @@ build-backend = "hatchling.build"
 
 [tool.rye]
 managed = true
-dev-dependencies = ["setuptools~=67.8.0", "ruff~=0.0.270", "pyright~=1.1.310", "black[d]~=23.3.0"]
+dev-dependencies = [
+    "setuptools~=67.8.0",
+    "ruff~=0.0.270",
+    "pyright~=1.1.310",
+    "black[d]~=23.3.0",
+]
 
 [tool.hatch.metadata]
 allow-direct-references = true
+
+[tool.pyright]
+typeCheckingMode = "strict"
+reportMissingTypeStubs = false
 
 [tool.ruff]
 line-length = 120

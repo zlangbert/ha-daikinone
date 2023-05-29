@@ -103,10 +103,12 @@ class DaikinOneThermostat(ClimateEntity):
     @property
     def target_temperature(self) -> float | None:
         match self._thermostat.mode:
-            case DaikinThermostatMode.HEAT, DaikinThermostatMode.AUX_HEAT:
+            case DaikinThermostatMode.HEAT | DaikinThermostatMode.AUX_HEAT:
                 return self._thermostat.set_point_heat.celsius
             case DaikinThermostatMode.COOL:
                 return self._thermostat.set_point_cool.celsius
+            case _:
+                pass
 
         return None
 
@@ -115,6 +117,8 @@ class DaikinOneThermostat(ClimateEntity):
         match self._thermostat.mode:
             case DaikinThermostatMode.AUTO:
                 return self._thermostat.set_point_heat.celsius
+            case _:
+                pass
 
         return None
 
@@ -123,6 +127,8 @@ class DaikinOneThermostat(ClimateEntity):
         match self._thermostat.mode:
             case DaikinThermostatMode.AUTO:
                 return self._thermostat.set_point_cool.celsius
+            case _:
+                pass
 
         return None
 
