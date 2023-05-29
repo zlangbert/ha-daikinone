@@ -82,7 +82,7 @@ class DaikinOneThermostat(ClimateEntity):
             name=self._thermostat.name,
             manufacturer=MANUFACTURER,
             model=self._thermostat.model,
-            sw_version=self._thermostat.firmware,
+            sw_version=self._thermostat.firmware_version,
         )
 
     @property

@@ -1,5 +1,5 @@
 import logging
-from typing import Callable, TypeVar
+from typing import Callable, TypeVar, Generic
 
 from homeassistant.components.sensor import SensorEntity, SensorEntityDescription, SensorDeviceClass, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
@@ -11,7 +11,13 @@ from homeassistant.helpers.typing import StateType
 
 from custom_components.daikinone import DOMAIN, DaikinOneData
 from custom_components.daikinone.const import MANUFACTURER
-from custom_components.daikinone.daikinone import DaikinThermostat, DaikinAirHandler, DaikinEquipment, DaikinOutdoorUnit
+from custom_components.daikinone.daikinone import (
+    DaikinDevice,
+    DaikinThermostat,
+    DaikinAirHandler,
+    DaikinEquipment,
+    DaikinOutdoorUnit,
+)
 
 log = logging.getLogger(__name__)
 
@@ -40,7 +46,7 @@ async def async_setup_entry(
                     icon="mdi:connection",
                 ),
                 data=data,
-                thermostat=thermostat,
+                device=thermostat,
                 attribute=lambda d: "Online" if d.online else "Offline"
             ),
         ]
@@ -62,9 +68,73 @@ async def async_setup_entry(
                                 icon="mdi:fan",
                             ),
                             data=data,
-                            thermostat=thermostat,
-                            equipment=equipment,
+                            device=equipment,
                             attribute=lambda e: e.current_airflow
+                        ),
+                        DaikinOneEquipmentSensor(
+                            description=SensorEntityDescription(
+                                key="fan_demand_requested",
+                                name="Fan Demand Requested",
+                                has_entity_name=True,
+                                state_class=SensorStateClass.MEASUREMENT,
+                                native_unit_of_measurement=PERCENTAGE,
+                                icon="mdi:fan",
+                            ),
+                            data=data,
+                            device=equipment,
+                            attribute=lambda e: e.fan_demand_requested_percent
+                        ),
+                        DaikinOneEquipmentSensor(
+                            description=SensorEntityDescription(
+                                key="fan_demand_current",
+                                name="Fan Demand Current",
+                                has_entity_name=True,
+                                state_class=SensorStateClass.MEASUREMENT,
+                                native_unit_of_measurement=PERCENTAGE,
+                                icon="mdi:fan",
+                            ),
+                            data=data,
+                            device=equipment,
+                            attribute=lambda e: e.fan_demand_current_percent
+                        ),
+                        DaikinOneEquipmentSensor(
+                            description=SensorEntityDescription(
+                                key="heat_demand_requested",
+                                name="Heat Demand Requested",
+                                has_entity_name=True,
+                                state_class=SensorStateClass.MEASUREMENT,
+                                native_unit_of_measurement=PERCENTAGE,
+                                icon="mdi:heat-wave",
+                            ),
+                            data=data,
+                            device=equipment,
+                            attribute=lambda e: e.heat_demand_requested_percent
+                        ),
+                        DaikinOneEquipmentSensor(
+                            description=SensorEntityDescription(
+                                key="heat_demand_current",
+                                name="Heat Demand Current",
+                                has_entity_name=True,
+                                state_class=SensorStateClass.MEASUREMENT,
+                                native_unit_of_measurement=PERCENTAGE,
+                                icon="mdi:heat-wave",
+                            ),
+                            data=data,
+                            device=equipment,
+                            attribute=lambda e: e.heat_demand_current_percent
+                        ),
+                        DaikinOneEquipmentSensor(
+                            description=SensorEntityDescription(
+                                key="humidification_demand_requested",
+                                name="Humidification Demand Requested",
+                                has_entity_name=True,
+                                state_class=SensorStateClass.MEASUREMENT,
+                                native_unit_of_measurement=PERCENTAGE,
+                                icon="mdi:water-percent",
+                            ),
+                            data=data,
+                            device=equipment,
+                            attribute=lambda e: e.humidification_demand_requested_percent
                         ),
                     ]
 
@@ -81,8 +151,7 @@ async def async_setup_entry(
                                 icon="mdi:fan",
                             ),
                             data=data,
-                            thermostat=thermostat,
-                            equipment=equipment,
+                            device=equipment,
                             attribute=lambda e: e.fan_rpm
                         ),
                         DaikinOneEquipmentSensor(
@@ -95,8 +164,7 @@ async def async_setup_entry(
                                 icon="mdi:sun-thermometer",
                             ),
                             data=data,
-                            thermostat=thermostat,
-                            equipment=equipment,
+                            device=equipment,
                             attribute=lambda e: e.heat_demand_percent
                         ),
                         DaikinOneEquipmentSensor(
@@ -109,8 +177,7 @@ async def async_setup_entry(
                                 icon="mdi:snowflake-thermometer",
                             ),
                             data=data,
-                            thermostat=thermostat,
-                            equipment=equipment,
+                            device=equipment,
                             attribute=lambda e: e.cool_demand_percent
                         ),
                         DaikinOneEquipmentSensor(
@@ -123,8 +190,7 @@ async def async_setup_entry(
                                 icon="mdi:air-filter",
                             ),
                             data=data,
-                            thermostat=thermostat,
-                            equipment=equipment,
+                            device=equipment,
                             attribute=lambda e: e.fan_demand_percent
                         ),
                         DaikinOneEquipmentSensor(
@@ -137,8 +203,7 @@ async def async_setup_entry(
                                 icon="mdi:air-humidifier",
                             ),
                             data=data,
-                            thermostat=thermostat,
-                            equipment=equipment,
+                            device=equipment,
                             attribute=lambda e: e.dehumidify_demand_percent
                         ),
                         DaikinOneEquipmentSensor(
@@ -152,8 +217,7 @@ async def async_setup_entry(
                                 icon="mdi:thermometer",
                             ),
                             data=data,
-                            thermostat=thermostat,
-                            equipment=equipment,
+                            device=equipment,
                             attribute=lambda e: e.air_temperature.celsius
                         ),
                         DaikinOneEquipmentSensor(
@@ -167,8 +231,7 @@ async def async_setup_entry(
                                 icon="mdi:thermometer",
                             ),
                             data=data,
-                            thermostat=thermostat,
-                            equipment=equipment,
+                            device=equipment,
                             attribute=lambda e: e.coil_temperature.celsius
                         ),
                         DaikinOneEquipmentSensor(
@@ -182,8 +245,7 @@ async def async_setup_entry(
                                 icon="mdi:thermometer",
                             ),
                             data=data,
-                            thermostat=thermostat,
-                            equipment=equipment,
+                            device=equipment,
                             attribute=lambda e: e.discharge_temperature.celsius
                         ),
                         DaikinOneEquipmentSensor(
@@ -197,8 +259,7 @@ async def async_setup_entry(
                                 icon="mdi:thermometer",
                             ),
                             data=data,
-                            thermostat=thermostat,
-                            equipment=equipment,
+                            device=equipment,
                             attribute=lambda e: e.liquid_temperature.celsius
                         ),
                         DaikinOneEquipmentSensor(
@@ -212,8 +273,7 @@ async def async_setup_entry(
                                 icon="mdi:thermometer",
                             ),
                             data=data,
-                            thermostat=thermostat,
-                            equipment=equipment,
+                            device=equipment,
                             attribute=lambda e: e.defrost_sensor_temperature.celsius
                         ),
                     ]
@@ -224,101 +284,108 @@ async def async_setup_entry(
     async_add_entities(entities, True)
 
 
-class DaikinOneThermostatSensor(SensorEntity):
+D = TypeVar("D", covariant=True, bound=DaikinDevice)
+
+
+class DaikinOneSensor(SensorEntity, Generic[D]):
+
+    _state: StateType = None
 
     def __init__(
             self,
             description: SensorEntityDescription,
             data: DaikinOneData,
-            thermostat: DaikinThermostat,
-            attribute: Callable[[DaikinThermostat], str]
+            device: D,
+            attribute: Callable[[D], StateType]
     ) -> None:
         """Initialize the sensor."""
 
         self.entity_description = description
         self._data = data
-        self._thermostat = thermostat
+        self._device: D = device
         self._attribute = attribute
-        self._state = None
 
     @property
     def unique_id(self):
         """Return a unique identifier for this sensor."""
-        return f"{self._thermostat.id}-{self.name}"
+        return f"{self._device.id}-{self.name}"
 
     @property
     def device_info(self) -> DeviceInfo | None:
         """Return device information for this sensor."""
 
-        return DeviceInfo(
-            identifiers={(DOMAIN, self._thermostat.id)},
-            name=f"{self._thermostat.name} Thermostat",
+        info = DeviceInfo(
+            identifiers={(DOMAIN, self._device.id)},
+            name=self.device_name,
             manufacturer=MANUFACTURER,
-            model=self._thermostat.model,
-            sw_version=self._thermostat.firmware,
+            model=self._device.model,
+            sw_version=self._device.firmware_version,
         )
+
+        if self.device_parent is not None:
+            info["via_device"] = (DOMAIN, self.device_parent)
+
+        return info
+
+    @property
+    def device_name(self) -> str:
+        """Return the name of the device."""
+        raise NotImplementedError("Sensor subclass did not implement device_name")
+
+    @property
+    def device_parent(self) -> str | None:
+        """Return the name of the device."""
+        return None
 
     @property
     def native_value(self):
         """Return the state of the sensor."""
         return self._state
 
+
+class DaikinOneThermostatSensor(DaikinOneSensor[DaikinThermostat]):
+
+    def __init__(
+            self, description: SensorEntityDescription,
+            data: DaikinOneData,
+            device: DaikinThermostat,
+            attribute: Callable[[DaikinThermostat], StateType]
+    ) -> None:
+        super().__init__(description, data, device, attribute)
+
+    @property
+    def device_name(self) -> str:
+        return f"{self._device.name} Thermostat"
+
     async def async_update(self) -> None:
         """Get the latest state of the sensor."""
         await self._data.update()
-        self._thermostat = self._data.daikin.get_thermostat(self._thermostat.id)
-        self._state = self._attribute(self._thermostat)
+        self._device = self._data.daikin.get_thermostat(self._device.id)
+        self._state = self._attribute(self._device)
 
 
 E = TypeVar("E", bound=DaikinEquipment)
 
 
-class DaikinOneEquipmentSensor(SensorEntity):
+class DaikinOneEquipmentSensor(DaikinOneSensor[E]):
 
     def __init__(
             self,
             description: SensorEntityDescription,
             data: DaikinOneData,
-            thermostat: DaikinThermostat,
-            equipment: E,
+            device: E,
             attribute: Callable[[E], StateType]
     ) -> None:
-        """Initialize the sensor."""
-
-        self.entity_description = description
-        self._data = data
-        self._thermostat = thermostat
-        self._equipment: E = equipment
-        self._attribute = attribute
-
-        self._state: StateType = None
+        super().__init__(description, data, device, attribute)
 
     @property
-    def unique_id(self):
-        """Return a unique identifier for this sensor."""
-        return f"{self._equipment.id}-{self.name}"
-
-    @property
-    def device_info(self) -> DeviceInfo | None:
-        """Return device information for this sensor."""
-
-        return DeviceInfo(
-            identifiers={(DOMAIN, self._equipment.id)},
-            name=f"{self._thermostat.name} {self._equipment.name}",
-            manufacturer=MANUFACTURER,
-            model=self._equipment.model,
-            sw_version=self._equipment.control_software_version,
-            via_device=(DOMAIN, self._thermostat.id)
-        )
-
-    @property
-    def native_value(self):
-        """Return the state of the sensor."""
-        return self._state
+    def device_name(self) -> str:
+        thermostat = self._data.daikin.get_thermostat(self._device.thermostat_id)
+        return f"{thermostat.name} {self._device.name}"
 
     async def async_update(self) -> None:
         """Get the latest state of the sensor."""
         await self._data.update()
-        self._thermostat = self._data.daikin.get_thermostat(self._thermostat.id)
-        self._equipment = self._thermostat.equipment[self._equipment.id]
-        self._state = self._attribute(self._equipment)
+        thermostat = self._data.daikin.get_thermostat(self._device.thermostat_id)
+        self._device = thermostat.equipment[self._device.id]
+        self._state = self._attribute(self._device)
