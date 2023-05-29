@@ -58,6 +58,7 @@ class DaikinAirHandler(DaikinEquipment):
     heat_demand_requested_percent: int
     heat_demand_current_percent: int
     humidification_demand_requested_percent: int
+    power_usage: float
 
 
 @dataclass
@@ -73,6 +74,7 @@ class DaikinOutdoorUnit(DaikinEquipment):
     discharge_temperature: Temperature
     liquid_temperature: Temperature
     defrost_sensor_temperature: Temperature
+    power_usage: float
 
 
 class DaikinThermostatCapability(Enum):
@@ -223,6 +225,7 @@ class DaikinOne:
                 heat_demand_requested_percent=payload.data["ctAHHeatRequestedDemand"] / 2,
                 heat_demand_current_percent=payload.data["ctAHHeatCurrentDemandStatus"] / 2,
                 humidification_demand_requested_percent=payload.data["ctAHHumidificationRequestedDemand"] / 2,
+                power_usage=payload.data["ctIndoorPower"] / 10,
             )
 
         if payload.data["ctOutdoorUnitType"] < 255:
@@ -255,6 +258,7 @@ class DaikinOne:
                 defrost_sensor_temperature=Temperature.from_fahrenheit(
                     payload.data["ctOutdoorDefrostSensorTemperature"] / 10
                 ),
+                power_usage=payload.data["ctOutdoorPower"] * 10,
             )
 
         return equipment

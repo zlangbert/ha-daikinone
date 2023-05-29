@@ -37,3 +37,5 @@ jobs:
       run: rye run pyright
     - name: Lint
       run: rye run ruff check .
+    - name: Format Check
+      run: rye run black --check custom_components

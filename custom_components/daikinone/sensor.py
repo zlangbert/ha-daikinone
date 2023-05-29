@@ -3,7 +3,7 @@ from typing import Callable, TypeVar, Generic
 
 from homeassistant.components.sensor import SensorEntity, SensorEntityDescription, SensorDeviceClass, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory, UnitOfTemperature, PERCENTAGE
+from homeassistant.const import EntityCategory, UnitOfTemperature, PERCENTAGE, UnitOfPower
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -134,6 +134,20 @@ async def async_setup_entry(
                             data=data,
                             device=equipment,
                             attribute=lambda e: e.humidification_demand_requested_percent,
+                        ),
+                        DaikinOneEquipmentSensor(
+                            description=SensorEntityDescription(
+                                key="power_usage",
+                                name="Power Usage",
+                                has_entity_name=True,
+                                state_class=SensorStateClass.MEASUREMENT,
+                                device_class=SensorDeviceClass.POWER,
+                                native_unit_of_measurement=UnitOfPower.WATT,
+                                icon="mdi:meter-electric",
+                            ),
+                            data=data,
+                            device=equipment,
+                            attribute=lambda e: e.power_usage,
                         ),
                     ]
 
@@ -274,6 +288,20 @@ async def async_setup_entry(
                             data=data,
                             device=equipment,
                             attribute=lambda e: e.defrost_sensor_temperature.celsius,
+                        ),
+                        DaikinOneEquipmentSensor(
+                            description=SensorEntityDescription(
+                                key="power_usage",
+                                name="Power Usage",
+                                has_entity_name=True,
+                                state_class=SensorStateClass.MEASUREMENT,
+                                device_class=SensorDeviceClass.POWER,
+                                native_unit_of_measurement=UnitOfPower.WATT,
+                                icon="mdi:meter-electric",
+                            ),
+                            data=data,
+                            device=equipment,
+                            attribute=lambda e: e.power_usage,
                         ),
                     ]
 
