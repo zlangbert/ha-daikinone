@@ -30,17 +30,28 @@ class DaikinLocation:
 
 
 @dataclass
-class DaikinEquipment:
+class DaikinDevice:
     id: str
     name: str
     model: str
+    firmware_version: str
+
+
+@dataclass
+class DaikinEquipment(DaikinDevice):
+    thermostat_id: str
     serial: str
-    control_software_version: str
 
 
 @dataclass
 class DaikinAirHandler(DaikinEquipment):
+    mode: str
     current_airflow: int
+    fan_demand_requested_percent: int
+    fan_demand_current_percent: int
+    heat_demand_requested_percent: int
+    heat_demand_current_percent: int
+    humidification_demand_requested_percent: int
 
 
 @dataclass
@@ -69,12 +80,8 @@ class DaikinThermostatSchedule:
 
 
 @dataclass
-class DaikinThermostat:
-    id: str
+class DaikinThermostat(DaikinDevice):
     location_id: str
-    name: str
-    model: str
-    firmware: str
     online: bool
     capabilities: set[DaikinThermostatCapability]
     mode: DaikinThermostatMode
@@ -176,7 +183,7 @@ class DaikinOne:
             location_id=payload.locationId,
             name=payload.name,
             model=payload.model,
-            firmware=payload.firmware,
+            firmware_version=payload.firmware,
             online=payload.online,
             capabilities=capabilities,
             mode=DaikinThermostatMode(payload.data["mode"]),
@@ -206,11 +213,18 @@ class DaikinOne:
 
             equipment[eid] = DaikinAirHandler(
                 id=eid,
+                thermostat_id=payload.id,
                 name="Air Handler",
                 model=model,
+                firmware_version=payload.data["ctAHControlSoftwareVersion"].strip(),
                 serial=serial,
-                control_software_version=payload.data["ctAHControlSoftwareVersion"].strip(),
+                mode=payload.data["ctAHMode"].strip(),
                 current_airflow=payload.data["ctAHCurrentIndoorAirflow"],
+                fan_demand_requested_percent=payload.data["ctAHFanRequestedDemand"] / 2,
+                fan_demand_current_percent=payload.data["ctAHFanCurrentDemandStatus"] / 2,
+                heat_demand_requested_percent=payload.data["ctAHHeatRequestedDemand"] / 2,
+                heat_demand_current_percent=payload.data["ctAHHeatCurrentDemandStatus"] / 2,
+                humidification_demand_requested_percent=payload.data["ctAHHumidificationRequestedDemand"] / 2,
             )
 
         if payload.data["ctOutdoorUnitType"] < 255:
@@ -225,10 +239,11 @@ class DaikinOne:
 
             equipment[eid] = DaikinOutdoorUnit(
                 id=eid,
+                thermostat_id=payload.id,
                 name=name,
                 model=model,
                 serial=serial,
-                control_software_version=payload.data["ctOutdoorControlSoftwareVersion"].strip(),
+                firmware_version=payload.data["ctOutdoorControlSoftwareVersion"].strip(),
                 inverter_software_version=payload.data["ctOutdoorInverterSoftwareVersion"].strip(),
                 fan_rpm=payload.data["ctOutdoorFanRPM"],
                 heat_demand_percent=round(payload.data["ctOutdoorHeatRequestedDemand"] / 2, 1),
