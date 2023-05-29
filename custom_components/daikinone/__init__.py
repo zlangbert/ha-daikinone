@@ -20,7 +20,7 @@ class DaikinOneData:
 
     async def update(self, no_throttle: bool = False) -> None:
         """Get the latest data from Daikin cloud"""
-        await self._update(no_throttle)  # type: ignore
+        await self._update(no_throttle=no_throttle)  # type: ignore
 
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
     async def _update(self) -> None:
