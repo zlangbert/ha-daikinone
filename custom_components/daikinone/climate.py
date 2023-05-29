@@ -5,7 +5,7 @@ from homeassistant.components.climate import (
     ClimateEntityDescription,
     HVACMode,
     ClimateEntityFeature,
-    HVACAction
+    HVACAction,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfTemperature
@@ -14,8 +14,15 @@ from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from custom_components.daikinone import DaikinOneData, DOMAIN
-from custom_components.daikinone.const import DaikinThermostatMode, MANUFACTURER, DaikinThermostatStatus
-from custom_components.daikinone.daikinone import DaikinThermostat, DaikinThermostatCapability
+from custom_components.daikinone.const import (
+    DaikinThermostatMode,
+    MANUFACTURER,
+    DaikinThermostatStatus,
+)
+from custom_components.daikinone.daikinone import (
+    DaikinThermostat,
+    DaikinThermostatCapability,
+)
 
 log = logging.getLogger(__name__)
 
@@ -29,20 +36,16 @@ DAIKIN_THERMOSTAT_STATUS_TO_HASS = {
 
 
 async def async_setup_entry(
-        hass: HomeAssistant,
-        config_entry: ConfigEntry,
-        async_add_entities: AddEntitiesCallback,
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Daikin One thermostats"""
     data: DaikinOneData = hass.data[DOMAIN]
 
     entities = [
         DaikinOneThermostat(
-            ClimateEntityDescription(
-                key=device.id,
-                name="Thermostat",
-                has_entity_name=True
-            ),
+            ClimateEntityDescription(key=device.id, name="Thermostat", has_entity_name=True),
             data,
             device,
         )
@@ -59,10 +62,10 @@ class DaikinOneThermostat(ClimateEntity):
     _thermostat: DaikinThermostat
 
     def __init__(
-            self,
-            description: ClimateEntityDescription,
-            data: DaikinOneData,
-            thermostat: DaikinThermostat
+        self,
+        description: ClimateEntityDescription,
+        data: DaikinOneData,
+        thermostat: DaikinThermostat,
     ):
         self.entity_description = description
         self._data = data
@@ -87,10 +90,7 @@ class DaikinOneThermostat(ClimateEntity):
 
     @property
     def supported_features(self):
-        return (
-                ClimateEntityFeature.TARGET_TEMPERATURE |
-                ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
-        )
+        return ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
 
     @property
     def temperature_unit(self):
@@ -129,12 +129,18 @@ class DaikinOneThermostat(ClimateEntity):
     @property
     def min_temp(self) -> float:
         # these should be the same but just in case, take the larger of the two for the min
-        return max(self._thermostat.set_point_heat_min.celsius, self._thermostat.set_point_cool_min.celsius)
+        return max(
+            self._thermostat.set_point_heat_min.celsius,
+            self._thermostat.set_point_cool_min.celsius,
+        )
 
     @property
     def max_temp(self) -> float:
         # these should be the same but just in case, take the smaller of the two for the max
-        return min(self._thermostat.set_point_heat_max.celsius, self._thermostat.set_point_cool_max.celsius)
+        return min(
+            self._thermostat.set_point_heat_max.celsius,
+            self._thermostat.set_point_cool_max.celsius,
+        )
 
     @property
     def current_humidity(self) -> int:
@@ -144,8 +150,10 @@ class DaikinOneThermostat(ClimateEntity):
     def hvac_modes(self) -> list[HVACMode]:
         modes = [HVACMode.AUTO]
 
-        if (DaikinThermostatCapability.HEAT in self._thermostat.capabilities and
-                DaikinThermostatCapability.COOL in self._thermostat.capabilities):
+        if (
+            DaikinThermostatCapability.HEAT in self._thermostat.capabilities
+            and DaikinThermostatCapability.COOL in self._thermostat.capabilities
+        ):
             modes.append(HVACMode.HEAT_COOL)
 
         if DaikinThermostatCapability.HEAT in self._thermostat.capabilities:

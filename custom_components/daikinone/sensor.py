@@ -23,9 +23,9 @@ log = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-        hass: HomeAssistant,
-        config_entry: ConfigEntry,
-        async_add_entities: AddEntitiesCallback,
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Daikin One sensors"""
     data: DaikinOneData = hass.data[DOMAIN]
@@ -47,14 +47,13 @@ async def async_setup_entry(
                 ),
                 data=data,
                 device=thermostat,
-                attribute=lambda d: "Online" if d.online else "Offline"
+                attribute=lambda d: "Online" if d.online else "Offline",
             ),
         ]
 
         # equipment sensors
         for equipment in thermostat.equipment.values():
             match equipment:
-
                 # air handler sensors
                 case DaikinAirHandler():
                     entities += [
@@ -69,7 +68,7 @@ async def async_setup_entry(
                             ),
                             data=data,
                             device=equipment,
-                            attribute=lambda e: e.current_airflow
+                            attribute=lambda e: e.current_airflow,
                         ),
                         DaikinOneEquipmentSensor(
                             description=SensorEntityDescription(
@@ -82,7 +81,7 @@ async def async_setup_entry(
                             ),
                             data=data,
                             device=equipment,
-                            attribute=lambda e: e.fan_demand_requested_percent
+                            attribute=lambda e: e.fan_demand_requested_percent,
                         ),
                         DaikinOneEquipmentSensor(
                             description=SensorEntityDescription(
@@ -95,7 +94,7 @@ async def async_setup_entry(
                             ),
                             data=data,
                             device=equipment,
-                            attribute=lambda e: e.fan_demand_current_percent
+                            attribute=lambda e: e.fan_demand_current_percent,
                         ),
                         DaikinOneEquipmentSensor(
                             description=SensorEntityDescription(
@@ -108,7 +107,7 @@ async def async_setup_entry(
                             ),
                             data=data,
                             device=equipment,
-                            attribute=lambda e: e.heat_demand_requested_percent
+                            attribute=lambda e: e.heat_demand_requested_percent,
                         ),
                         DaikinOneEquipmentSensor(
                             description=SensorEntityDescription(
@@ -121,7 +120,7 @@ async def async_setup_entry(
                             ),
                             data=data,
                             device=equipment,
-                            attribute=lambda e: e.heat_demand_current_percent
+                            attribute=lambda e: e.heat_demand_current_percent,
                         ),
                         DaikinOneEquipmentSensor(
                             description=SensorEntityDescription(
@@ -134,7 +133,7 @@ async def async_setup_entry(
                             ),
                             data=data,
                             device=equipment,
-                            attribute=lambda e: e.humidification_demand_requested_percent
+                            attribute=lambda e: e.humidification_demand_requested_percent,
                         ),
                     ]
 
@@ -152,7 +151,7 @@ async def async_setup_entry(
                             ),
                             data=data,
                             device=equipment,
-                            attribute=lambda e: e.fan_rpm
+                            attribute=lambda e: e.fan_rpm,
                         ),
                         DaikinOneEquipmentSensor(
                             description=SensorEntityDescription(
@@ -165,7 +164,7 @@ async def async_setup_entry(
                             ),
                             data=data,
                             device=equipment,
-                            attribute=lambda e: e.heat_demand_percent
+                            attribute=lambda e: e.heat_demand_percent,
                         ),
                         DaikinOneEquipmentSensor(
                             description=SensorEntityDescription(
@@ -178,7 +177,7 @@ async def async_setup_entry(
                             ),
                             data=data,
                             device=equipment,
-                            attribute=lambda e: e.cool_demand_percent
+                            attribute=lambda e: e.cool_demand_percent,
                         ),
                         DaikinOneEquipmentSensor(
                             description=SensorEntityDescription(
@@ -191,7 +190,7 @@ async def async_setup_entry(
                             ),
                             data=data,
                             device=equipment,
-                            attribute=lambda e: e.fan_demand_percent
+                            attribute=lambda e: e.fan_demand_percent,
                         ),
                         DaikinOneEquipmentSensor(
                             description=SensorEntityDescription(
@@ -204,7 +203,7 @@ async def async_setup_entry(
                             ),
                             data=data,
                             device=equipment,
-                            attribute=lambda e: e.dehumidify_demand_percent
+                            attribute=lambda e: e.dehumidify_demand_percent,
                         ),
                         DaikinOneEquipmentSensor(
                             description=SensorEntityDescription(
@@ -218,7 +217,7 @@ async def async_setup_entry(
                             ),
                             data=data,
                             device=equipment,
-                            attribute=lambda e: e.air_temperature.celsius
+                            attribute=lambda e: e.air_temperature.celsius,
                         ),
                         DaikinOneEquipmentSensor(
                             description=SensorEntityDescription(
@@ -232,7 +231,7 @@ async def async_setup_entry(
                             ),
                             data=data,
                             device=equipment,
-                            attribute=lambda e: e.coil_temperature.celsius
+                            attribute=lambda e: e.coil_temperature.celsius,
                         ),
                         DaikinOneEquipmentSensor(
                             description=SensorEntityDescription(
@@ -246,7 +245,7 @@ async def async_setup_entry(
                             ),
                             data=data,
                             device=equipment,
-                            attribute=lambda e: e.discharge_temperature.celsius
+                            attribute=lambda e: e.discharge_temperature.celsius,
                         ),
                         DaikinOneEquipmentSensor(
                             description=SensorEntityDescription(
@@ -260,7 +259,7 @@ async def async_setup_entry(
                             ),
                             data=data,
                             device=equipment,
-                            attribute=lambda e: e.liquid_temperature.celsius
+                            attribute=lambda e: e.liquid_temperature.celsius,
                         ),
                         DaikinOneEquipmentSensor(
                             description=SensorEntityDescription(
@@ -274,7 +273,7 @@ async def async_setup_entry(
                             ),
                             data=data,
                             device=equipment,
-                            attribute=lambda e: e.defrost_sensor_temperature.celsius
+                            attribute=lambda e: e.defrost_sensor_temperature.celsius,
                         ),
                     ]
 
@@ -288,15 +287,10 @@ D = TypeVar("D", covariant=True, bound=DaikinDevice)
 
 
 class DaikinOneSensor(SensorEntity, Generic[D]):
-
     _state: StateType = None
 
     def __init__(
-            self,
-            description: SensorEntityDescription,
-            data: DaikinOneData,
-            device: D,
-            attribute: Callable[[D], StateType]
+        self, description: SensorEntityDescription, data: DaikinOneData, device: D, attribute: Callable[[D], StateType]
     ) -> None:
         """Initialize the sensor."""
 
@@ -344,12 +338,12 @@ class DaikinOneSensor(SensorEntity, Generic[D]):
 
 
 class DaikinOneThermostatSensor(DaikinOneSensor[DaikinThermostat]):
-
     def __init__(
-            self, description: SensorEntityDescription,
-            data: DaikinOneData,
-            device: DaikinThermostat,
-            attribute: Callable[[DaikinThermostat], StateType]
+        self,
+        description: SensorEntityDescription,
+        data: DaikinOneData,
+        device: DaikinThermostat,
+        attribute: Callable[[DaikinThermostat], StateType],
     ) -> None:
         super().__init__(description, data, device, attribute)
 
@@ -368,13 +362,8 @@ E = TypeVar("E", bound=DaikinEquipment)
 
 
 class DaikinOneEquipmentSensor(DaikinOneSensor[E]):
-
     def __init__(
-            self,
-            description: SensorEntityDescription,
-            data: DaikinOneData,
-            device: E,
-            attribute: Callable[[E], StateType]
+        self, description: SensorEntityDescription, data: DaikinOneData, device: E, attribute: Callable[[E], StateType]
     ) -> None:
         super().__init__(description, data, device, attribute)
 

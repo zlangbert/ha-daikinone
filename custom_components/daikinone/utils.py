@@ -18,19 +18,19 @@ class Temperature:
         self._temp_c: float = temp_c
 
     @staticmethod
-    def from_celsius(temp_c: float) -> 'Temperature':
+    def from_celsius(temp_c: float) -> "Temperature":
         temp = Temperature()
         temp._init(temp_c)
         return temp
 
     @staticmethod
-    def from_fahrenheit(temp_f: float) -> 'Temperature':
+    def from_fahrenheit(temp_f: float) -> "Temperature":
         temp = Temperature()
         temp._init((temp_f - 32) * 5 / 9)
         return temp
 
     @staticmethod
-    def from_kelvin(temp_k: float) -> 'Temperature':
+    def from_kelvin(temp_k: float) -> "Temperature":
         temp = Temperature()
         temp._init(temp_k - 273.15)
         return temp
@@ -52,7 +52,7 @@ class Temperature:
         yield cls.validate
 
     @classmethod
-    def validate(cls, v: Any) -> 'Temperature':
+    def validate(cls, v: Any) -> "Temperature":
         if not isinstance(v, cls):
             raise TypeError(f"Expected an instance of Temperature, received {type(v)}")
 

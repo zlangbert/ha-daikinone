@@ -19,10 +19,7 @@ class DaikinSkyportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @property
     def schema(self):
         """Return current schema."""
-        return vol.Schema({
-            vol.Required(CONF_EMAIL): str,
-            vol.Required(CONF_PASSWORD): str
-        })
+        return vol.Schema({vol.Required(CONF_EMAIL): str, vol.Required(CONF_PASSWORD): str})
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None):
         errors = {}
@@ -43,12 +40,7 @@ class DaikinSkyportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     data={
                         CONF_EMAIL: email,
                         CONF_PASSWORD: password,
-                    }
+                    },
                 )
 
-        return self.async_show_form(
-            step_id="user",
-            data_schema=self.schema,
-            errors=errors
-        )
-
+        return self.async_show_form(step_id="user", data_schema=self.schema, errors=errors)
