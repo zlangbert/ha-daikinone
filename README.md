@@ -27,6 +27,7 @@ A custom component for Home Assistant to integrate with Daikin One+ smart HVAC s
 ## Todo
 
 * Weather entities for each thermostat
+* Outdoor air quality
 * Support for additional equipment types
 
 ## Support/Tested Equipment

@@ -18,14 +18,12 @@ from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from custom_components.daikinone import DaikinOneData, DOMAIN
-from custom_components.daikinone.const import (
-    DaikinThermostatMode,
-    MANUFACTURER,
-    DaikinThermostatStatus,
-)
+from custom_components.daikinone.const import MANUFACTURER
 from custom_components.daikinone.daikinone import (
     DaikinThermostat,
     DaikinThermostatCapability,
+    DaikinThermostatMode,
+    DaikinThermostatStatus,
 )
 from custom_components.daikinone.utils import Temperature
 
@@ -242,6 +240,8 @@ class DaikinOneThermostat(ClimateEntity):
         if target_temp_low or target_temp_high:
             heat = Temperature.from_celsius(target_temp_low) if target_temp_low is not None else None
             cool = Temperature.from_celsius(target_temp_high) if target_temp_high is not None else None
+
+            # TODO: take min temp delta into account
 
             log.debug("Setting thermostat set points: heat=%s and cool=%s", heat, cool)
 
