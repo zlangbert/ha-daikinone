@@ -59,6 +59,17 @@ async def async_setup_entry(
                     entities += [
                         DaikinOneEquipmentSensor(
                             description=SensorEntityDescription(
+                                key="mode",
+                                name="Mode",
+                                has_entity_name=True,
+                                device_class=SensorDeviceClass.ENUM,
+                            ),
+                            data=data,
+                            device=equipment,
+                            attribute=lambda e: e.mode,
+                        ),
+                        DaikinOneEquipmentSensor(
+                            description=SensorEntityDescription(
                                 key="airflow",
                                 name="Airflow",
                                 has_entity_name=True,
@@ -156,6 +167,17 @@ async def async_setup_entry(
                     entities += [
                         DaikinOneEquipmentSensor(
                             description=SensorEntityDescription(
+                                key="mode",
+                                name="Mode",
+                                has_entity_name=True,
+                                device_class=SensorDeviceClass.ENUM,
+                            ),
+                            data=data,
+                            device=equipment,
+                            attribute=lambda e: e.mode,
+                        ),
+                        DaikinOneEquipmentSensor(
+                            description=SensorEntityDescription(
                                 key="fan_speed",
                                 name="Fan Speed",
                                 has_entity_name=True,
@@ -205,6 +227,19 @@ async def async_setup_entry(
                             data=data,
                             device=equipment,
                             attribute=lambda e: e.fan_demand_percent,
+                        ),
+                        DaikinOneEquipmentSensor(
+                            description=SensorEntityDescription(
+                                key="fan_airflow_demand",
+                                name="Fan Airflow Demand",
+                                has_entity_name=True,
+                                state_class=SensorStateClass.MEASUREMENT,
+                                native_unit_of_measurement="cfm",
+                                icon="mdi:air-filter",
+                            ),
+                            data=data,
+                            device=equipment,
+                            attribute=lambda e: e.fan_demand_airflow,
                         ),
                         DaikinOneEquipmentSensor(
                             description=SensorEntityDescription(
