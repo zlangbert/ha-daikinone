@@ -20,7 +20,8 @@ A custom component for Home Assistant to integrate with Daikin One+ smart HVAC s
 
 ## Features
 
-* Climate entities for each thermostat
+* Controllable climate entities for each thermostat
+* Intelligent handling of thermostat updates for ultra-fast response times
 * Sensors for status, temperatures, airflow, demand, etc. for all connected equipment
 
 ## Todo

@@ -14,9 +14,6 @@ class Temperature:
         print(temp.fahrenheit)  # Prints the temperature in Fahrenheit
     """
 
-    def _init(self, temp_c: float) -> None:
-        self._temp_c: float = temp_c
-
     @staticmethod
     def from_celsius(temp_c: float) -> "Temperature":
         temp = Temperature()
@@ -34,6 +31,9 @@ class Temperature:
         temp = Temperature()
         temp._init(temp_k - 273.15)
         return temp
+
+    def _init(self, temp_c: float) -> None:
+        self._temp_c: float = round(temp_c, 1)
 
     @property
     def celsius(self) -> float:
@@ -60,3 +60,9 @@ class Temperature:
             raise TypeError("Temperature instance is not initialized")
 
         return v
+
+    def __eq__(self, o: object) -> bool:
+        return isinstance(o, Temperature) and self._temp_c == o._temp_c
+
+    def __str__(self) -> str:
+        return f"{self.celsius}°C"

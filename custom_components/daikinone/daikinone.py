@@ -11,7 +11,6 @@ from pydantic.dataclasses import dataclass
 from .const import (
     DAIKIN_API_URL_LOGIN,
     DAIKIN_API_URL_REFRESH_TOKEN,
-    DAIKIN_API_URL_LOCATIONS,
     DAIKIN_API_URL_DEVICE_DATA,
     DaikinThermostatMode,
     DaikinThermostatStatus,
@@ -26,13 +25,6 @@ log = logging.getLogger(__name__)
 class DaikinUserCredentials:
     email: str
     password: str
-
-
-@dataclass
-class DaikinLocation:
-    id: str
-    name: str
-    address: str
 
 
 @dataclass
@@ -64,10 +56,12 @@ class DaikinAirHandler(DaikinEquipment):
 @dataclass
 class DaikinOutdoorUnit(DaikinEquipment):
     inverter_software_version: str | None
+    mode: str
     fan_rpm: int
     heat_demand_percent: int
     cool_demand_percent: int
     fan_demand_percent: int
+    fan_demand_airflow: int
     dehumidify_demand_percent: int
     air_temperature: Temperature
     coil_temperature: Temperature
@@ -127,21 +121,13 @@ class DaikinOne:
 
     __auth = _AuthState()
 
-    __locations: dict[str, DaikinLocation] = dict()
     __thermostats: dict[str, DaikinThermostat] = dict()
 
     def __init__(self, creds: DaikinUserCredentials):
         self.creds = creds
 
     async def update(self) -> None:
-        await self.__refresh_locations()
         await self.__refresh_thermostats()
-
-    def get_locations(self) -> dict[str, DaikinLocation]:
-        return copy.deepcopy(self.__locations)
-
-    def get_location(self, location_id: str) -> DaikinLocation:
-        return copy.deepcopy(self.__locations[location_id])
 
     def get_thermostat(self, thermostat_id: str) -> DaikinThermostat:
         return copy.deepcopy(self.__thermostats[thermostat_id])
@@ -149,17 +135,38 @@ class DaikinOne:
     def get_thermostats(self) -> dict[str, DaikinThermostat]:
         return copy.deepcopy(self.__thermostats)
 
-    async def __refresh_locations(self):
-        locations = await self.__req(DAIKIN_API_URL_LOCATIONS)
-        self.__locations = {
-            location["id"]: DaikinLocation(
-                id=location["id"],
-                name=location["name"],
-                address=location["address"],
-            )
-            for location in locations
-        }
-        log.info(f"Cached {len(self.__locations)} locations")
+    async def set_thermostat_mode(self, thermostat_id: str, mode: DaikinThermostatMode) -> None:
+        """Set thermostat mode"""
+        await self.__req(
+            url=f"{DAIKIN_API_URL_DEVICE_DATA}/{thermostat_id}",
+            method="PUT",
+            body={"mode": mode.value},
+        )
+
+    async def set_thermostat_home_set_points(
+        self,
+        thermostat_id: str,
+        heat: Temperature | None = None,
+        cool: Temperature | None = None,
+        override_schedule: bool = False,
+    ) -> None:
+        """Set thermostat home set points"""
+        if not heat and not cool:
+            raise ValueError("At least one of heat or cool set points must be set")
+
+        payload = {}
+        if heat:
+            payload["hspHome"] = heat.celsius
+        if cool:
+            payload["cspHome"] = cool.celsius
+        if override_schedule:
+            payload["schedOverride"] = True
+
+        await self.__req(
+            url=f"{DAIKIN_API_URL_DEVICE_DATA}/{thermostat_id}",
+            method="PUT",
+            body=payload,
+        )
 
     async def __refresh_thermostats(self):
         devices = await self.__req(DAIKIN_API_URL_DEVICE_DATA)
@@ -218,7 +225,7 @@ class DaikinOne:
                 model=model,
                 firmware_version=payload.data["ctAHControlSoftwareVersion"].strip(),
                 serial=serial,
-                mode=payload.data["ctAHMode"].strip(),
+                mode=payload.data["ctAHMode"].strip().capitalize(),
                 current_airflow=payload.data["ctAHCurrentIndoorAirflow"],
                 fan_demand_requested_percent=payload.data["ctAHFanRequestedDemand"] / 2,
                 fan_demand_current_percent=payload.data["ctAHFanCurrentDemandStatus"] / 2,
@@ -246,10 +253,12 @@ class DaikinOne:
                 serial=serial,
                 firmware_version=payload.data["ctOutdoorControlSoftwareVersion"].strip(),
                 inverter_software_version=payload.data["ctOutdoorInverterSoftwareVersion"].strip(),
+                mode=payload.data["ctOutdoorMode"].strip().capitalize(),
                 fan_rpm=payload.data["ctOutdoorFanRPM"],
                 heat_demand_percent=round(payload.data["ctOutdoorHeatRequestedDemand"] / 2, 1),
                 cool_demand_percent=round(payload.data["ctOutdoorCoolRequestedDemand"] / 2, 1),
                 fan_demand_percent=round(payload.data["ctOutdoorFanRequestedDemandPercentage"] / 2, 1),
+                fan_demand_airflow=payload.data["ctOutdoorRequestedIndoorAirflow"],
                 dehumidify_demand_percent=round(payload.data["ctOutdoorDeHumidificationRequestedDemand"] / 2, 1),
                 air_temperature=Temperature.from_fahrenheit(payload.data["ctOutdoorAirTemperature"] / 10),
                 coil_temperature=Temperature.from_fahrenheit(payload.data["ctOutdoorCoilTemperature"] / 10),
@@ -331,15 +340,23 @@ class DaikinOne:
 
                 return True
 
-    async def __req(self, url: str, retry: bool = True) -> Any:
+    async def __req(
+        self,
+        url: str,
+        method: str = "GET",
+        body: dict[str, Any] | None = None,
+        retry: bool = True,
+    ) -> Any:
         if self.__auth.authenticated is not True:
             await self.login()
 
-        log.debug(f"Sending request to Daikin API: GET {url}")
+        log.debug(f"Sending request to Daikin API: {method} {url}")
         async with aiohttp.ClientSession(
             headers={"Accept": "application/json", "Authorization": f"Bearer {self.__auth.access_token}"}
         ) as session:
-            async with session.get(url) as response:
+            async with session.request(method, url, json=body) as response:
+                log.debug(f"Got response: {response.status}")
+
                 if response.status == 200:
                     payload = await response.json()
                     return payload
@@ -347,6 +364,8 @@ class DaikinOne:
                 if response.status == 401:
                     if retry:
                         await self.__refresh_token()
-                        return await self.__req(url, retry=False)
+                        return await self.__req(url, method, body, retry=False)
 
-        raise DaikinServiceException(f"Failed to send request to Daikin API: GET {url}")
+        raise DaikinServiceException(
+            f"Failed to send request to Daikin API: method={method} url={url} body={body}, response={response}"
+        )
