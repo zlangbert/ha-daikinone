@@ -1,6 +1,8 @@
 import copy
 import logging
+from datetime import timedelta
 from enum import Enum, auto
+from urllib.parse import urljoin
 from typing import Any
 
 import aiohttp
@@ -8,17 +10,17 @@ from aiohttp import ClientError
 from pydantic import BaseModel
 from pydantic.dataclasses import dataclass
 
-from .const import (
-    DAIKIN_API_URL_LOGIN,
-    DAIKIN_API_URL_REFRESH_TOKEN,
-    DAIKIN_API_URL_DEVICE_DATA,
-    DaikinThermostatMode,
-    DaikinThermostatStatus,
-)
 from .exceptions import DaikinServiceException
 from custom_components.daikinone.utils import Temperature
 
 log = logging.getLogger(__name__)
+
+DAIKIN_API_URL_BASE = "https://api.daikinskyport.com"
+DAIKIN_API_URL_LOGIN = urljoin(DAIKIN_API_URL_BASE, "/users/auth/login")
+DAIKIN_API_URL_REFRESH_TOKEN = urljoin(DAIKIN_API_URL_BASE, "/users/auth/token")
+DAIKIN_API_URL_LOCATIONS = urljoin(DAIKIN_API_URL_BASE, "/locations")
+DAIKIN_API_URL_DEVICES = urljoin(DAIKIN_API_URL_BASE, "/devices")
+DAIKIN_API_URL_DEVICE_DATA = urljoin(DAIKIN_API_URL_BASE, "/deviceData")
 
 
 @dataclass
@@ -53,11 +55,23 @@ class DaikinAirHandler(DaikinEquipment):
     power_usage: float
 
 
+class DaikinOutdoorUnitReversingValveStatus(Enum):
+    OFF = 0
+    ON = 1
+
+
 @dataclass
 class DaikinOutdoorUnit(DaikinEquipment):
     inverter_software_version: str | None
+    total_runtime: timedelta
     mode: str
-    fan_rpm: int
+    compressor_speed_target: int
+    compressor_speed_current: int
+    outdoor_fan_target_rpm: int
+    outdoor_fan_rpm: int
+    suction_pressure_psi: int
+    eev_opening_percent: int
+    reversing_valve: DaikinOutdoorUnitReversingValveStatus
     heat_demand_percent: int
     cool_demand_percent: int
     fan_demand_percent: int
@@ -68,12 +82,34 @@ class DaikinOutdoorUnit(DaikinEquipment):
     discharge_temperature: Temperature
     liquid_temperature: Temperature
     defrost_sensor_temperature: Temperature
+    inverter_fin_temperature: Temperature
     power_usage: float
+    compressor_amps: float
+    inverter_amps: float
+    fan_motor_amps: float
+
+    # compressor reduction mode - ctOutdoorCompressorReductionMode - 1=off, ?
 
 
 class DaikinThermostatCapability(Enum):
     HEAT = auto()
     COOL = auto()
+
+
+class DaikinThermostatMode(Enum):
+    OFF = 0
+    HEAT = 1
+    COOL = 2
+    AUTO = 3
+    AUX_HEAT = 4
+
+
+class DaikinThermostatStatus(Enum):
+    COOLING = 1
+    DRYING = 2
+    HEATING = 3
+    CIRCULATING_AIR = 4
+    IDLE = 5
 
 
 @dataclass
@@ -253,8 +289,15 @@ class DaikinOne:
                 serial=serial,
                 firmware_version=payload.data["ctOutdoorControlSoftwareVersion"].strip(),
                 inverter_software_version=payload.data["ctOutdoorInverterSoftwareVersion"].strip(),
+                total_runtime=timedelta(hours=payload.data["ctOutdoorCompressorRunTime"]),
                 mode=payload.data["ctOutdoorMode"].strip().capitalize(),
-                fan_rpm=payload.data["ctOutdoorFanRPM"],
+                compressor_speed_target=payload.data["ctTargetCompressorspeed"],
+                compressor_speed_current=payload.data["ctCurrentCompressorRPS"],
+                outdoor_fan_target_rpm=payload.data["ctTargetODFanRPM"] * 10,
+                outdoor_fan_rpm=payload.data["ctOutdoorFanRPM"],
+                suction_pressure_psi=payload.data["ctOutdoorSuctionPressure"],
+                eev_opening_percent=payload.data["ctOutdoorEEVOpening"],
+                reversing_valve=DaikinOutdoorUnitReversingValveStatus(payload.data["ctReversingValve"]),
                 heat_demand_percent=round(payload.data["ctOutdoorHeatRequestedDemand"] / 2, 1),
                 cool_demand_percent=round(payload.data["ctOutdoorCoolRequestedDemand"] / 2, 1),
                 fan_demand_percent=round(payload.data["ctOutdoorFanRequestedDemandPercentage"] / 2, 1),
@@ -267,7 +310,11 @@ class DaikinOne:
                 defrost_sensor_temperature=Temperature.from_fahrenheit(
                     payload.data["ctOutdoorDefrostSensorTemperature"] / 10
                 ),
+                inverter_fin_temperature=Temperature.from_celsius(payload.data["ctInverterFinTemp"]),
                 power_usage=payload.data["ctOutdoorPower"] * 10,
+                compressor_amps=payload.data["ctCompressorCurrent"] / 10,
+                inverter_amps=payload.data["ctInverterCurrent"] / 10,
+                fan_motor_amps=payload.data["ctODFanMotorCurrent"] / 10,
             )
 
         return equipment
@@ -277,10 +324,14 @@ class DaikinOne:
         log.info("Logging in to Daikin API")
         try:
             async with aiohttp.ClientSession(
-                headers={"Accept": "application/json", "Content-Type": "application/json"}
+                headers={
+                    "Accept": "application/json",
+                    "Content-Type": "application/json",
+                }
             ) as session:
                 async with session.post(
-                    url=DAIKIN_API_URL_LOGIN, json={"email": self.creds.email, "password": self.creds.password}
+                    url=DAIKIN_API_URL_LOGIN,
+                    json={"email": self.creds.email, "password": self.creds.password},
                 ) as response:
                     if response.status != 200:
                         log.error(f"Request to login failed: {response}")
@@ -318,7 +369,10 @@ class DaikinOne:
         ) as session:
             async with session.post(
                 url=DAIKIN_API_URL_REFRESH_TOKEN,
-                json={"email": self.creds.email, "refreshToken": self.__auth.refresh_token},
+                json={
+                    "email": self.creds.email,
+                    "refreshToken": self.__auth.refresh_token,
+                },
             ) as response:
                 if response.status != 200:
                     log.error(f"Request to refresh access token: {response}")
@@ -352,7 +406,10 @@ class DaikinOne:
 
         log.debug(f"Sending request to Daikin API: {method} {url}")
         async with aiohttp.ClientSession(
-            headers={"Accept": "application/json", "Authorization": f"Bearer {self.__auth.access_token}"}
+            headers={
+                "Accept": "application/json",
+                "Authorization": f"Bearer {self.__auth.access_token}",
+            }
         ) as session:
             async with session.request(method, url, json=body) as response:
                 log.debug(f"Got response: {response.status}")

@@ -3,7 +3,15 @@ from typing import Callable, TypeVar, Generic
 
 from homeassistant.components.sensor import SensorEntity, SensorEntityDescription, SensorDeviceClass, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory, UnitOfTemperature, PERCENTAGE, UnitOfPower
+from homeassistant.const import (
+    EntityCategory,
+    UnitOfTemperature,
+    PERCENTAGE,
+    UnitOfPower,
+    UnitOfTime,
+    UnitOfPressure,
+    UnitOfElectricCurrent,
+)
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -167,6 +175,21 @@ async def async_setup_entry(
                     entities += [
                         DaikinOneEquipmentSensor(
                             description=SensorEntityDescription(
+                                key="total_runtime",
+                                name="Total Runtime",
+                                has_entity_name=True,
+                                state_class=SensorStateClass.TOTAL_INCREASING,
+                                device_class=SensorDeviceClass.DURATION,
+                                native_unit_of_measurement=UnitOfTime.SECONDS,
+                                suggested_unit_of_measurement=UnitOfTime.HOURS,
+                                icon="mdi:clock-time-ten-outline",
+                            ),
+                            data=data,
+                            device=equipment,
+                            attribute=lambda e: e.total_runtime.total_seconds(),
+                        ),
+                        DaikinOneEquipmentSensor(
+                            description=SensorEntityDescription(
                                 key="mode",
                                 name="Mode",
                                 has_entity_name=True,
@@ -178,8 +201,34 @@ async def async_setup_entry(
                         ),
                         DaikinOneEquipmentSensor(
                             description=SensorEntityDescription(
-                                key="fan_speed",
-                                name="Fan Speed",
+                                key="compressor_speed_target",
+                                name="Compressor Speed Target",
+                                has_entity_name=True,
+                                state_class=SensorStateClass.MEASUREMENT,
+                                native_unit_of_measurement="rps",
+                                icon="mdi:heat-pump",
+                            ),
+                            data=data,
+                            device=equipment,
+                            attribute=lambda e: e.compressor_speed_target,
+                        ),
+                        DaikinOneEquipmentSensor(
+                            description=SensorEntityDescription(
+                                key="compressor_speed_current",
+                                name="Compressor Speed",
+                                has_entity_name=True,
+                                state_class=SensorStateClass.MEASUREMENT,
+                                native_unit_of_measurement="rps",
+                                icon="mdi:heat-pump",
+                            ),
+                            data=data,
+                            device=equipment,
+                            attribute=lambda e: e.compressor_speed_current,
+                        ),
+                        DaikinOneEquipmentSensor(
+                            description=SensorEntityDescription(
+                                key="outdoor_fan_speed",
+                                name="Outdoor Fan Speed",
                                 has_entity_name=True,
                                 state_class=SensorStateClass.MEASUREMENT,
                                 native_unit_of_measurement="rpm",
@@ -187,7 +236,47 @@ async def async_setup_entry(
                             ),
                             data=data,
                             device=equipment,
-                            attribute=lambda e: e.fan_rpm,
+                            attribute=lambda e: e.outdoor_fan_rpm,
+                        ),
+                        DaikinOneEquipmentSensor(
+                            description=SensorEntityDescription(
+                                key="outdoor_fan_target",
+                                name="Outdoor Fan Target Speed",
+                                has_entity_name=True,
+                                state_class=SensorStateClass.MEASUREMENT,
+                                native_unit_of_measurement="rpm",
+                                icon="mdi:fan",
+                            ),
+                            data=data,
+                            device=equipment,
+                            attribute=lambda e: e.outdoor_fan_target_rpm,
+                        ),
+                        DaikinOneEquipmentSensor(
+                            description=SensorEntityDescription(
+                                key="suction_pressure",
+                                name="Suction Pressure",
+                                has_entity_name=True,
+                                state_class=SensorStateClass.MEASUREMENT,
+                                device_class=SensorDeviceClass.PRESSURE,
+                                native_unit_of_measurement=UnitOfPressure.PSI,
+                                icon="mdi:pipe",
+                            ),
+                            data=data,
+                            device=equipment,
+                            attribute=lambda e: e.suction_pressure_psi,
+                        ),
+                        DaikinOneEquipmentSensor(
+                            description=SensorEntityDescription(
+                                key="eev_opening",
+                                name="EEV Opening",
+                                has_entity_name=True,
+                                state_class=SensorStateClass.MEASUREMENT,
+                                native_unit_of_measurement=PERCENTAGE,
+                                icon="mdi:valve",
+                            ),
+                            data=data,
+                            device=equipment,
+                            attribute=lambda e: e.eev_opening_percent,
                         ),
                         DaikinOneEquipmentSensor(
                             description=SensorEntityDescription(
@@ -326,6 +415,20 @@ async def async_setup_entry(
                         ),
                         DaikinOneEquipmentSensor(
                             description=SensorEntityDescription(
+                                key="inverter_fin_temperature",
+                                name="Inverter Fin Temperature",
+                                has_entity_name=True,
+                                state_class=SensorStateClass.MEASUREMENT,
+                                device_class=SensorDeviceClass.TEMPERATURE,
+                                native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+                                icon="mdi:thermometer",
+                            ),
+                            data=data,
+                            device=equipment,
+                            attribute=lambda e: e.inverter_fin_temperature.celsius,
+                        ),
+                        DaikinOneEquipmentSensor(
+                            description=SensorEntityDescription(
                                 key="power_usage",
                                 name="Power Usage",
                                 has_entity_name=True,
@@ -337,6 +440,48 @@ async def async_setup_entry(
                             data=data,
                             device=equipment,
                             attribute=lambda e: e.power_usage,
+                        ),
+                        DaikinOneEquipmentSensor(
+                            description=SensorEntityDescription(
+                                key="compressor_current",
+                                name="Compressor Current",
+                                has_entity_name=True,
+                                state_class=SensorStateClass.MEASUREMENT,
+                                device_class=SensorDeviceClass.CURRENT,
+                                native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
+                                icon="mdi:meter-electric",
+                            ),
+                            data=data,
+                            device=equipment,
+                            attribute=lambda e: e.compressor_amps,
+                        ),
+                        DaikinOneEquipmentSensor(
+                            description=SensorEntityDescription(
+                                key="inverter_current",
+                                name="Inverter Current",
+                                has_entity_name=True,
+                                state_class=SensorStateClass.MEASUREMENT,
+                                device_class=SensorDeviceClass.CURRENT,
+                                native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
+                                icon="mdi:meter-electric",
+                            ),
+                            data=data,
+                            device=equipment,
+                            attribute=lambda e: e.inverter_amps,
+                        ),
+                        DaikinOneEquipmentSensor(
+                            description=SensorEntityDescription(
+                                key="fan_motor_current",
+                                name="Fan Motor Current",
+                                has_entity_name=True,
+                                state_class=SensorStateClass.MEASUREMENT,
+                                device_class=SensorDeviceClass.CURRENT,
+                                native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
+                                icon="mdi:meter-electric",
+                            ),
+                            data=data,
+                            device=equipment,
+                            attribute=lambda e: e.fan_motor_amps,
                         ),
                     ]
 
