@@ -22,7 +22,7 @@ from custom_components.daikinone.const import MANUFACTURER
 from custom_components.daikinone.daikinone import (
     DaikinDevice,
     DaikinThermostat,
-    DaikinAirHandler,
+    DaikinIndoorUnit,
     DaikinEquipment,
     DaikinOutdoorUnit,
 )
@@ -63,7 +63,7 @@ async def async_setup_entry(
         for equipment in thermostat.equipment.values():
             match equipment:
                 # air handler sensors
-                case DaikinAirHandler():
+                case DaikinIndoorUnit():
                     entities += [
                         DaikinOneEquipmentSensor(
                             description=SensorEntityDescription(
@@ -169,6 +169,58 @@ async def async_setup_entry(
                             attribute=lambda e: e.power_usage,
                         ),
                     ]
+
+                    # optional indoor unit sensors
+                    if equipment.cool_demand_requested_percent is not None:
+                        entities.append(
+                            DaikinOneEquipmentSensor(
+                                description=SensorEntityDescription(
+                                    key="cool_demand_requested",
+                                    name="Cool Demand Requested",
+                                    has_entity_name=True,
+                                    state_class=SensorStateClass.MEASUREMENT,
+                                    native_unit_of_measurement=PERCENTAGE,
+                                    icon="mdi:snowflake-thermometer",
+                                ),
+                                data=data,
+                                device=equipment,
+                                attribute=lambda e: e.cool_demand_requested_percent,
+                            )
+                        )
+
+                    if equipment.cool_demand_current_percent is not None:
+                        entities.append(
+                            DaikinOneEquipmentSensor(
+                                description=SensorEntityDescription(
+                                    key="cool_demand_current",
+                                    name="Cool Demand Current",
+                                    has_entity_name=True,
+                                    state_class=SensorStateClass.MEASUREMENT,
+                                    native_unit_of_measurement=PERCENTAGE,
+                                    icon="mdi:snowflake-thermometer",
+                                ),
+                                data=data,
+                                device=equipment,
+                                attribute=lambda e: e.cool_demand_current_percent,
+                            )
+                        )
+
+                    if equipment.dehumidification_demand_requested_percent is not None:
+                        entities.append(
+                            DaikinOneEquipmentSensor(
+                                description=SensorEntityDescription(
+                                    key="dehumidification_demand_requested",
+                                    name="Dehumidification Demand Requested",
+                                    has_entity_name=True,
+                                    state_class=SensorStateClass.MEASUREMENT,
+                                    native_unit_of_measurement=PERCENTAGE,
+                                    icon="mdi:air-humidifier",
+                                ),
+                                data=data,
+                                device=equipment,
+                                attribute=lambda e: e.dehumidification_demand_requested_percent,
+                            )
+                        )
 
                 # outdoor unit sensors
                 case DaikinOutdoorUnit():

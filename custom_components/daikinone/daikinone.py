@@ -44,14 +44,17 @@ class DaikinEquipment(DaikinDevice):
 
 
 @dataclass
-class DaikinAirHandler(DaikinEquipment):
+class DaikinIndoorUnit(DaikinEquipment):
     mode: str
     current_airflow: int
     fan_demand_requested_percent: int
     fan_demand_current_percent: int
     heat_demand_requested_percent: int
     heat_demand_current_percent: int
+    cool_demand_requested_percent: int | None
+    cool_demand_current_percent: int | None
     humidification_demand_requested_percent: int
+    dehumidification_demand_requested_percent: int | None
     power_usage: float
 
 
@@ -262,11 +265,12 @@ class DaikinOne:
             model = payload.data["ctAHModelNoCharacter1_15"].strip()
             serial = payload.data["ctAHSerialNoCharacter1_15"].strip()
             eid = f"{model}-{serial}"
+            name = "Air Handler"
 
-            equipment[eid] = DaikinAirHandler(
+            equipment[eid] = DaikinIndoorUnit(
                 id=eid,
                 thermostat_id=payload.id,
-                name="Air Handler",
+                name=name,
                 model=model,
                 firmware_version=payload.data["ctAHControlSoftwareVersion"].strip(),
                 serial=serial,
@@ -276,10 +280,41 @@ class DaikinOne:
                 fan_demand_current_percent=payload.data["ctAHFanCurrentDemandStatus"] / 2,
                 heat_demand_requested_percent=payload.data["ctAHHeatRequestedDemand"] / 2,
                 heat_demand_current_percent=payload.data["ctAHHeatCurrentDemandStatus"] / 2,
+                cool_demand_requested_percent=None,
+                cool_demand_current_percent=None,
                 humidification_demand_requested_percent=payload.data["ctAHHumidificationRequestedDemand"] / 2,
+                dehumidification_demand_requested_percent=None,
                 power_usage=payload.data["ctIndoorPower"] / 10,
             )
 
+        # furnace
+        if payload.data["ctIFCUnitType"] < 255:
+            model = payload.data["ctIFCModelNoCharacter1_15"].strip()
+            serial = payload.data["ctIFCSerialNoCharacter1_15"].strip()
+            eid = f"{model}-{serial}"
+            name = "Furnace"
+
+            equipment[eid] = DaikinIndoorUnit(
+                id=eid,
+                thermostat_id=payload.id,
+                name=name,
+                model=model,
+                firmware_version=payload.data["ctIFCControlSoftwareVersion"].strip(),
+                serial=serial,
+                mode=payload.data["ctIFCOperatingHeatCoolMode"].strip().capitalize(),
+                current_airflow=payload.data["ctIFCIndoorBlowerAirflow"],
+                fan_demand_requested_percent=payload.data["ctIFCFanRequestedDemandPercent"] / 2,
+                fan_demand_current_percent=payload.data["ctIFCCurrentFanActualStatus"] / 2,
+                heat_demand_requested_percent=payload.data["ctIFCHeatRequestedDemandPercent"] / 2,
+                heat_demand_current_percent=payload.data["ctIFCCurrentHeatActualStatus"] / 2,
+                cool_demand_requested_percent=payload.data["ctIFCCoolRequestedDemandPercent"] / 2,
+                cool_demand_current_percent=payload.data["ctIFCCurrentCoolActualStatus"] / 2,
+                humidification_demand_requested_percent=payload.data["ctIFCHumRequestedDemandPercent"] / 2,
+                dehumidification_demand_requested_percent=payload.data["ctIFCDehumRequestedDemandPercent"] / 2,
+                power_usage=payload.data["ctIndoorPower"] / 10,
+            )
+
+        # outdoor unit
         if payload.data["ctOutdoorUnitType"] < 255:
             model = payload.data["ctOutdoorModelNoCharacter1_15"].strip()
             serial = payload.data["ctOutdoorSerialNoCharacter1_15"].strip()

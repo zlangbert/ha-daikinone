@@ -5,7 +5,7 @@ description = "Add a short description here"
 authors = [
     { name = "Zach Langbert", email = "zach.langbert@gmail.com" }
 ]
-dependencies = ["homeassistant~=2023.5.4", "pydantic~=1.10.8", "backoff~=2.2.1"]
+dependencies = ["homeassistant~=2023.6.1", "pydantic~=1.10.8", "backoff~=2.2.1"]
 readme = "README.md"
 requires-python = ">= 3.11"
 
@@ -18,7 +18,7 @@ managed = true
 dev-dependencies = [
     "setuptools~=67.8.0",
     "ruff~=0.0.270",
-    "pyright~=1.1.311",
+    "pyright~=1.1.314",
     "black[d]~=23.3.0",
 ]
 
