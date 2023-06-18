@@ -8,7 +8,7 @@ A custom component for Home Assistant to integrate with Daikin One+ smart HVAC s
 * [Daikin One for Home Assistant](#daikin-one-for-home-assistant)
   * [Features](#features)
   * [Todo](#todo)
-  * [Support/Tested Equipment](#supporttested-equipment)
+  * [Supported Equipment](#supported-equipment)
     * [Thermostats](#thermostats)
     * [Air Handlers](#air-handlers)
     * [Heat Pumps](#heat-pumps)
@@ -30,9 +30,11 @@ A custom component for Home Assistant to integrate with Daikin One+ smart HVAC s
 * Outdoor air quality
 * Support for additional equipment types
 
-## Support/Tested Equipment
+## Supported Equipment
 
-The following is the list of currently confirmed working equipment. If you have a Daikin One+ system and your equipment is not listed here, please open an issue and we can work on adding support.
+The following is the list of currently confirmed working equipment.
+
+If you have a Daikin One+ system and your equipment is not listed here, please open an issue and we can work on adding support. Your raw Daikin API data can be retrieved by clicking "Download Diagnostics" on a thermostat's device page in Home Assistant. That information will be required to add support for your equipment. 
 
 ### Thermostats
 
