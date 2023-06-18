@@ -1,0 +1,202 @@
+- title: HVAC
+  path: hvac
+  type: custom:grid-layout
+  layout:
+    grid-template-columns: repeat(4, 25% [col-start])
+    grid-template-rows: auto
+    mediaquery:
+      '(max-width: 600px)':
+        grid-template-columns: repeat(2, 50% [col-start])
+  icon: mdi:hvac
+  badges: []
+  cards:
+    - type: thermostat
+      entity: climate.upstairs_thermostat
+    - type: thermostat
+      entity: climate.downstairs_thermostat
+    - type: custom:history-explorer-card
+      cardName: hvac-global
+      header: Outside Weather
+      uiLayout:
+        sticky: top
+        selector: hide
+      refresh:
+        interval: 10
+      defaultTimeRange: 6h
+      legendVisible: false
+      graphs:
+        - title: Temperature
+          type: line
+          options:
+            height: 125
+          entities:
+            - entity: sensor.openweathermap_temperature
+              name: Actual
+            - entity: sensor.openweathermap_feels_like_temperature
+              name: Feels Like
+        - title: Humidity
+          type: line
+          options:
+            height: 75
+          entities:
+            - entity: sensor.openweathermap_humidity
+              name: Actual
+              color: rgba(204, 149, 62, 1)
+              fill: rgba(204, 149, 62, 0.25)
+              legendVisible: false
+      view_layout:
+        grid-column: span 2
+    - type: custom:history-explorer-card
+      cardName: hvac-upstairs
+      header: Upstairs HVAC
+      uiLayout:
+        sticky: top
+      refresh:
+        interval: 10
+      defaultTimeRange: 6h
+      labelAreaWidth: 80
+      graphs:
+        - title: Equipment State
+          type: timeline
+          entities:
+            - entity: sensor.upstairs_air_handler_mode
+              name: Air Handler
+            - entity: sensor.upstairs_heat_pump_mode
+              name: Heat Pump
+        - title: Indoor Airflow
+          type: line
+          options:
+            height: 100
+          entities:
+            - entity: sensor.upstairs_air_handler_airflow
+              name: Air Handler
+        - title: Humidity Control
+          type: line
+          entities:
+            - entity: sensor.upstairs_heat_pump_dehumidify_demand
+              name: Defumidification Demand
+            - entity: sensor.upstairs_air_handler_humidification_demand_requested
+              name: Humidifcation Demand
+        - title: Air Handler Demands
+          type: line
+          entities:
+            - entity: sensor.upstairs_air_handler_fan_demand_current
+              name: Fan
+              color: rgba(204, 149, 62, 1)
+              fill: rgba(204, 149, 62, 0.25)
+            - entity: sensor.upstairs_air_handler_heat_demand_current
+              name: Heat
+              color: rgba(205, 62, 42, 1)
+              fill: rgba(205, 62, 42, 0.25)
+        - title: Heat Pump Demands
+          type: line
+          entities:
+            - entity: sensor.upstairs_heat_pump_cool_demand
+              name: Cool
+            - entity: sensor.upstairs_heat_pump_fan_demand
+              name: Fan
+              color: rgba(204, 149, 62, 1)
+              fill: rgba(204, 149, 62, 0.25)
+            - entity: sensor.upstairs_heat_pump_heat_demand
+              name: Heat
+              color: rgba(205, 62, 42, 1)
+              fill: rgba(205, 62, 42, 0.25)
+        - title: Heat Pump Temperatures
+          type: line
+          entities:
+            - entity: sensor.upstairs_heat_pump_air_temperature
+              name: Air
+            - entity: sensor.upstairs_heat_pump_coil_temperature
+              name: Coil
+            - entity: sensor.upstairs_heat_pump_liquid_temperature
+              name: Liquid
+            - entity: sensor.upstairs_heat_pump_discharge_temperature
+              name: Discharge
+            - entity: sensor.upstairs_heat_pump_defrost_sensor_temperature
+              name: Defrost Sensor
+        - title: Power Usage
+          type: line
+          entities:
+            - entity: sensor.emporia_vue_2_panel_2_circuit_12_power
+              name: Air Handler
+            - entity: sensor.emporia_vue_2_panel_1_circuit_1_power
+              name: Heat Pump
+      view_layout:
+        grid-column: span 2
+    - type: custom:history-explorer-card
+      cardName: hvac-downstairs
+      header: Downstairs HVAC
+      uiLayout:
+        sticky: top
+      refresh:
+        interval: 10
+      defaultTimeRange: 6h
+      labelAreaWidth: 80
+      graphs:
+        - title: Equipment State
+          type: timeline
+          entities:
+            - entity: sensor.downstairs_air_handler_mode
+              name: Air Handler
+            - entity: sensor.downstairs_heat_pump_mode
+              name: Heat Pump
+        - title: Indoor Airflow
+          type: line
+          options:
+            height: 100
+          entities:
+            - entity: sensor.downstairs_air_handler_airflow
+              name: Air Handler
+        - title: Humidity Control
+          type: line
+          entities:
+            - entity: sensor.downstairs_heat_pump_dehumidify_demand
+              name: Defumidification Demand
+            - entity: sensor.downstairs_air_handler_humidification_demand_requested
+              name: Humidifcation Demand
+        - title: Air Handler Demands
+          type: line
+          entities:
+            - entity: sensor.downstairs_air_handler_fan_demand_current
+              name: Fan
+              color: rgba(204, 149, 62, 1)
+              fill: rgba(204, 149, 62, 0.25)
+            - entity: sensor.downstairs_air_handler_heat_demand_current
+              name: Heat
+              color: rgba(205, 62, 42, 1)
+              fill: rgba(205, 62, 42, 0.25)
+        - title: Heat Pump Demands
+          type: line
+          entities:
+            - entity: sensor.downstairs_heat_pump_cool_demand
+              name: Cool
+            - entity: sensor.downstairs_heat_pump_fan_demand
+              name: Fan
+              color: rgba(204, 149, 62, 1)
+              fill: rgba(204, 149, 62, 0.25)
+            - entity: sensor.downstairs_heat_pump_heat_demand
+              name: Heat
+              color: rgba(205, 62, 42, 1)
+              fill: rgba(205, 62, 42, 0.25)
+        - title: Heat Pump Temperatures
+          type: line
+          entities:
+            - entity: sensor.downstairs_heat_pump_air_temperature
+              name: Air
+            - entity: sensor.downstairs_heat_pump_coil_temperature
+              name: Coil
+            - entity: sensor.downstairs_heat_pump_liquid_temperature
+              name: Liquid
+            - entity: sensor.downstairs_heat_pump_discharge_temperature
+              name: Discharge
+            - entity: sensor.downstairs_heat_pump_defrost_sensor_temperature
+              name: Defrost Sensor
+        - title: Power Usage
+          type: line
+          entities:
+            - entity: sensor.emporia_vue_2_panel_2_circuit_2_power
+              name: Air Handler
+            - entity: sensor.emporia_vue_2_panel_1_circuit_16_power
+              name: Heat Pump
+      view_layout:
+        grid-column: span 2
