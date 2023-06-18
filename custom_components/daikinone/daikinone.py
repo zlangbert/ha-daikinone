@@ -162,6 +162,15 @@ class DaikinOne:
     def __init__(self, creds: DaikinUserCredentials):
         self.creds = creds
 
+    async def get_raw_device_data(self, device_id: str) -> dict[str, Any] | None:
+        """Get raw device data"""
+        try:
+            return await self.__req(f"{DAIKIN_API_URL_DEVICE_DATA}/{device_id}")
+        except DaikinServiceException as e:
+            if e.status == 400 or e.status == 404:
+                return None
+            raise
+
     async def update(self) -> None:
         await self.__refresh_thermostats()
 
@@ -424,5 +433,6 @@ class DaikinOne:
                         return await self.__req(url, method, body, retry=False)
 
         raise DaikinServiceException(
-            f"Failed to send request to Daikin API: method={method} url={url} body={body}, response={response}"
+            f"Failed to send request to Daikin API: method={method} url={url} body={body}, response={response}",
+            status=response.status,
         )
