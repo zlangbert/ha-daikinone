@@ -21,6 +21,7 @@ from custom_components.daikinone import DOMAIN, DaikinOneData
 from custom_components.daikinone.const import MANUFACTURER
 from custom_components.daikinone.daikinone import (
     DaikinDevice,
+    DaikinOutdoorUnitReversingValveStatus,
     DaikinThermostat,
     DaikinIndoorUnit,
     DaikinEquipment,
@@ -536,6 +537,22 @@ async def async_setup_entry(
                             attribute=lambda e: e.fan_motor_amps,
                         ),
                     ]
+
+                    # optional outdoor unit sensors
+                    if equipment.reversing_valve is not DaikinOutdoorUnitReversingValveStatus.UNKNOWN:
+                        entities.append(
+                            DaikinOneEquipmentSensor(
+                                description=SensorEntityDescription(
+                                    key="reversing_valve",
+                                    name="Reversing Valve",
+                                    has_entity_name=True,
+                                    device_class=SensorDeviceClass.ENUM,
+                                ),
+                                data=data,
+                                device=equipment,
+                                attribute=lambda e: e.reversing_valve.name.capitalize(),
+                            )
+                        )
 
                 case _:
                     log.warning(f"unexpected equipment: {equipment}")
