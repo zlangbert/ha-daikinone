@@ -22,7 +22,7 @@ class DaikinSkyportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return vol.Schema({vol.Required(CONF_EMAIL): str, vol.Required(CONF_PASSWORD): str})
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None):
-        errors = {}
+        errors: dict[str, str] = {}
 
         if user_input is not None:
             email = user_input[CONF_EMAIL]

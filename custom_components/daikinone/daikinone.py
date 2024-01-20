@@ -202,7 +202,7 @@ class DaikinOne:
         if not heat and not cool:
             raise ValueError("At least one of heat or cool set points must be set")
 
-        payload = {}
+        payload: dict[str, Any] = {}
         if heat:
             payload["hspHome"] = heat.celsius
         if cool:

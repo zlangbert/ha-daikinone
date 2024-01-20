@@ -1,5 +1,5 @@
 import logging
-from typing import Callable, TypeVar, Generic
+from typing import Callable, Generic, TypeVar
 
 from homeassistant.components.sensor import SensorEntity, SensorEntityDescription, SensorDeviceClass, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
@@ -547,8 +547,6 @@ D = TypeVar("D", covariant=True, bound=DaikinDevice)
 
 
 class DaikinOneSensor(SensorEntity, Generic[D]):
-    _state: StateType = None
-
     def __init__(
         self, description: SensorEntityDescription, data: DaikinOneData, device: D, attribute: Callable[[D], StateType]
     ) -> None:
@@ -559,13 +557,10 @@ class DaikinOneSensor(SensorEntity, Generic[D]):
         self._device: D = device
         self._attribute = attribute
 
-    @property
-    def unique_id(self):
-        """Return a unique identifier for this sensor."""
-        return f"{self._device.id}-{self.name}"
+        self._attr_unique_id = f"{self._device.id}-{self.name}"
+        self._attr_device_info = self.get_device_info()
 
-    @property
-    def device_info(self) -> DeviceInfo | None:
+    def get_device_info(self) -> DeviceInfo | None:
         """Return device information for this sensor."""
 
         info = DeviceInfo(
@@ -591,11 +586,6 @@ class DaikinOneSensor(SensorEntity, Generic[D]):
         """Return the name of the device."""
         return None
 
-    @property
-    def native_value(self):
-        """Return the state of the sensor."""
-        return self._state
-
 
 class DaikinOneThermostatSensor(DaikinOneSensor[DaikinThermostat]):
     def __init__(
@@ -615,7 +605,7 @@ class DaikinOneThermostatSensor(DaikinOneSensor[DaikinThermostat]):
         """Get the latest state of the sensor."""
         await self._data.update()
         self._device = self._data.daikin.get_thermostat(self._device.id)
-        self._state = self._attribute(self._device)
+        self._attr_native_value = self._attribute(self._device)
 
 
 E = TypeVar("E", bound=DaikinEquipment)
@@ -637,4 +627,4 @@ class DaikinOneEquipmentSensor(DaikinOneSensor[E]):
         await self._data.update()
         thermostat = self._data.daikin.get_thermostat(self._device.thermostat_id)
         self._device = thermostat.equipment[self._device.id]
-        self._state = self._attribute(self._device)
+        self._attr_native_value = self._attribute(self._device)

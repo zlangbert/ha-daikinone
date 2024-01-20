@@ -40,7 +40,7 @@ async def async_setup_entry(
 
     entities = [
         DaikinOneThermostat(
-            ClimateEntityDescription(key=device.id, name=None),
+            ClimateEntityDescription(key=device.id, has_entity_name=True, name=None),
             data,
             device,
         )
@@ -68,94 +68,21 @@ class DaikinOneThermostat(ClimateEntity):
         self._data = data
         self._thermostat = thermostat
 
-    @property
-    def unique_id(self):
-        """Return a unique identifier for this sensor."""
-        return f"{self._thermostat.id}-climate"
-
-    @property
-    def device_info(self) -> DeviceInfo | None:
-        """Return device information for this sensor."""
-
-        return DeviceInfo(
+        self._attr_unique_id = f"{self._thermostat.id}-climate"
+        self._attr_temperature_unit = UnitOfTemperature.CELSIUS
+        self._attr_supported_features = (
+            ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
+        )
+        self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, self._thermostat.id)},
             name=f"{self._thermostat.name} Thermostat",
             manufacturer=MANUFACTURER,
             model=self._thermostat.model,
             sw_version=self._thermostat.firmware_version,
         )
+        self._attr_hvac_modes = self.get_hvac_modes()
 
-    @property
-    def available(self):
-        """Return if device is available."""
-        return self._thermostat.online
-
-    @property
-    def supported_features(self):
-        return ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
-
-    @property
-    def temperature_unit(self):
-        return UnitOfTemperature.CELSIUS
-
-    @property
-    def current_temperature(self) -> float | None:
-        return self._thermostat.indoor_temperature.celsius
-
-    @property
-    def target_temperature(self) -> float | None:
-        match self._thermostat.mode:
-            case DaikinThermostatMode.HEAT | DaikinThermostatMode.AUX_HEAT:
-                return self._thermostat.set_point_heat.celsius
-            case DaikinThermostatMode.COOL:
-                return self._thermostat.set_point_cool.celsius
-            case _:
-                pass
-
-        return None
-
-    @property
-    def target_temperature_low(self) -> float | None:
-        match self._thermostat.mode:
-            case DaikinThermostatMode.AUTO:
-                return self._thermostat.set_point_heat.celsius
-            case _:
-                pass
-
-        return None
-
-    @property
-    def target_temperature_high(self) -> float | None:
-        match self._thermostat.mode:
-            case DaikinThermostatMode.AUTO:
-                return self._thermostat.set_point_cool.celsius
-            case _:
-                pass
-
-        return None
-
-    @property
-    def min_temp(self) -> float:
-        # these should be the same but just in case, take the larger of the two for the min
-        return max(
-            self._thermostat.set_point_heat_min.celsius,
-            self._thermostat.set_point_cool_min.celsius,
-        )
-
-    @property
-    def max_temp(self) -> float:
-        # these should be the same but just in case, take the smaller of the two for the max
-        return min(
-            self._thermostat.set_point_heat_max.celsius,
-            self._thermostat.set_point_cool_max.celsius,
-        )
-
-    @property
-    def current_humidity(self) -> int:
-        return self._thermostat.indoor_humidity
-
-    @property
-    def hvac_modes(self) -> list[HVACMode]:
+    def get_hvac_modes(self) -> list[HVACMode]:
         modes: list[HVACMode] = []
 
         if (
@@ -172,34 +99,6 @@ class DaikinOneThermostat(ClimateEntity):
         modes.append(HVACMode.OFF)
 
         return modes
-
-    @property
-    def hvac_mode(self):
-        match self._thermostat.mode:
-            case DaikinThermostatMode.AUTO:
-                return HVACMode.HEAT_COOL
-            case DaikinThermostatMode.HEAT:
-                return HVACMode.HEAT
-            case DaikinThermostatMode.COOL:
-                return HVACMode.COOL
-            case DaikinThermostatMode.AUX_HEAT:
-                return HVACMode.HEAT
-            case DaikinThermostatMode.OFF:
-                return HVACMode.OFF
-
-    @property
-    def hvac_action(self):
-        match self._thermostat.status:
-            case DaikinThermostatStatus.HEATING:
-                return HVACAction.HEATING
-            case DaikinThermostatStatus.COOLING:
-                return HVACAction.COOLING
-            case DaikinThermostatStatus.CIRCULATING_AIR:
-                return HVACAction.FAN
-            case DaikinThermostatStatus.DRYING:
-                return HVACAction.DRYING
-            case DaikinThermostatStatus.IDLE:
-                return HVACAction.IDLE
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         """Set new target hvac mode."""
@@ -311,6 +210,77 @@ class DaikinOneThermostat(ClimateEntity):
         log.debug("Updating climate entity for thermostat %s", self._thermostat.id)
         await self._data.update(no_throttle=no_throttle)
         self._thermostat = self._data.daikin.get_thermostat(self._thermostat.id)
+
+        # update entity data
+        #
+        self._attr_available = self._thermostat.online
+        self._attr_current_temperature = self._thermostat.indoor_temperature.celsius
+        self._attr_current_humidity = self._thermostat.indoor_humidity
+
+        # hvac mode
+        #
+        match self._thermostat.mode:
+            case DaikinThermostatMode.AUTO:
+                self._attr_hvac_mode = HVACMode.HEAT_COOL
+            case DaikinThermostatMode.HEAT:
+                self._attr_hvac_mode = HVACMode.HEAT
+            case DaikinThermostatMode.COOL:
+                self._attr_hvac_mode = HVACMode.COOL
+            case DaikinThermostatMode.AUX_HEAT:
+                self._attr_hvac_mode = HVACMode.HEAT
+            case DaikinThermostatMode.OFF:
+                self._attr_hvac_mode = HVACMode.OFF
+
+        # hvac action
+        #
+        match self._thermostat.status:
+            case DaikinThermostatStatus.HEATING:
+                self._attr_hvac_action = HVACAction.HEATING
+            case DaikinThermostatStatus.COOLING:
+                self._attr_hvac_action = HVACAction.COOLING
+            case DaikinThermostatStatus.CIRCULATING_AIR:
+                self._attr_hvac_action = HVACAction.FAN
+            case DaikinThermostatStatus.DRYING:
+                self._attr_hvac_action = HVACAction.DRYING
+            case DaikinThermostatStatus.IDLE:
+                self._attr_hvac_action = HVACAction.IDLE
+
+        # target temperature
+        #
+        match self._thermostat.mode:
+            case DaikinThermostatMode.HEAT | DaikinThermostatMode.AUX_HEAT:
+                self._attr_target_temperature = self._thermostat.set_point_heat.celsius
+            case DaikinThermostatMode.COOL:
+                self._attr_target_temperature = self._thermostat.set_point_cool.celsius
+            case _:
+                pass
+
+        # target temperature range
+        #
+        match self._thermostat.mode:
+            case DaikinThermostatMode.AUTO:
+                self._attr_target_temperature_low = self._thermostat.set_point_heat.celsius
+            case _:
+                pass
+        match self._thermostat.mode:
+            case DaikinThermostatMode.AUTO:
+                self._attr_target_temperature_high = self._thermostat.set_point_cool.celsius
+            case _:
+                pass
+
+        # temperature bounds
+        #
+
+        # these should be the same but just in case, take the larger of the two for the min
+        self._attr_min_temp = max(
+            self._thermostat.set_point_heat_min.celsius,
+            self._thermostat.set_point_cool_min.celsius,
+        )
+        # these should be the same but just in case, take the smaller of the two for the max
+        self._attr_max_temp = min(
+            self._thermostat.set_point_heat_max.celsius,
+            self._thermostat.set_point_cool_max.celsius,
+        )
 
     async def update_state_optimistically(
         self, update: Callable[[DaikinThermostat], None], check: Callable[[DaikinThermostat], bool]
