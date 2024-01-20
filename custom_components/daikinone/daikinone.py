@@ -61,6 +61,7 @@ class DaikinIndoorUnit(DaikinEquipment):
 class DaikinOutdoorUnitReversingValveStatus(Enum):
     OFF = 0
     ON = 1
+    UNKNOWN = 255
 
 
 @dataclass
