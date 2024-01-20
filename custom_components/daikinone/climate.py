@@ -40,7 +40,7 @@ async def async_setup_entry(
 
     entities = [
         DaikinOneThermostat(
-            ClimateEntityDescription(key=device.id, name=None),
+            ClimateEntityDescription(key=device.id, has_entity_name=True, name=None),
             data,
             device,
         )
