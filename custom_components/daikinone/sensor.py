@@ -58,6 +58,34 @@ async def async_setup_entry(
                 device=thermostat,
                 attribute=lambda d: "Online" if d.online else "Offline",
             ),
+            DaikinOneThermostatSensor(
+                description=SensorEntityDescription(
+                    key="indoor_temperature",
+                    name="Indoor Temperature",
+                    has_entity_name=True,
+                    state_class=SensorStateClass.MEASUREMENT,
+                    device_class=SensorDeviceClass.TEMPERATURE,
+                    native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+                    icon="mdi:thermometer",
+                ),
+                data=data,
+                device=thermostat,
+                attribute=lambda d: d.indoor_temperature.celsius,
+            ),
+            DaikinOneThermostatSensor(
+                description=SensorEntityDescription(
+                    key="indoor_humidity",
+                    name="Indoor Humidity",
+                    has_entity_name=True,
+                    state_class=SensorStateClass.MEASUREMENT,
+                    device_class=SensorDeviceClass.HUMIDITY,
+                    native_unit_of_measurement="%",
+                    icon="mdi:water-percent",
+                ),
+                data=data,
+                device=thermostat,
+                attribute=lambda d: d.indoor_humidity,
+            ),
         ]
 
         # equipment sensors
