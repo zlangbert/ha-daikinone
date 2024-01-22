@@ -219,14 +219,13 @@ class DaikinOneThermostat(ClimateEntity):
         await self._data.update(no_throttle=no_throttle)
         self._thermostat = self._data.daikin.get_thermostat(self._thermostat.id)
 
-        # update entity data
-        #
+        self.update_entity_attributes()
+
+    def update_entity_attributes(self) -> None:
         self._attr_available = self._thermostat.online
         self._attr_current_temperature = self._thermostat.indoor_temperature.celsius
         self._attr_current_humidity = self._thermostat.indoor_humidity
 
-        # hvac mode
-        #
         match self._thermostat.mode:
             case DaikinThermostatMode.AUTO:
                 self._attr_hvac_mode = HVACMode.HEAT_COOL
@@ -239,8 +238,7 @@ class DaikinOneThermostat(ClimateEntity):
             case DaikinThermostatMode.OFF:
                 self._attr_hvac_mode = HVACMode.OFF
 
-        # hvac action
-        #
+        # hvac current action
         match self._thermostat.status:
             case DaikinThermostatStatus.HEATING:
                 self._attr_hvac_action = HVACAction.HEATING
@@ -254,18 +252,17 @@ class DaikinOneThermostat(ClimateEntity):
                 self._attr_hvac_action = HVACAction.IDLE
 
         # target temperature
-        #
+
+        # reset target temperature attributes first, single target temp takes precedence and can conflict with range
+        self._attr_target_temperature = None
+        self._attr_target_temperature_low = None
+        self._attr_target_temperature_high = None
+
         match self._thermostat.mode:
             case DaikinThermostatMode.HEAT | DaikinThermostatMode.AUX_HEAT:
                 self._attr_target_temperature = self._thermostat.set_point_heat.celsius
             case DaikinThermostatMode.COOL:
                 self._attr_target_temperature = self._thermostat.set_point_cool.celsius
-            case _:
-                pass
-
-        # target temperature range
-        #
-        match self._thermostat.mode:
             case DaikinThermostatMode.AUTO:
                 self._attr_target_temperature_low = self._thermostat.set_point_heat.celsius
                 self._attr_target_temperature_high = self._thermostat.set_point_cool.celsius
@@ -273,8 +270,6 @@ class DaikinOneThermostat(ClimateEntity):
                 pass
 
         # temperature bounds
-        #
-
         # these should be the same but just in case, take the larger of the two for the min
         self._attr_min_temp = max(
             self._thermostat.set_point_heat_min.celsius,
@@ -299,6 +294,7 @@ class DaikinOneThermostat(ClimateEntity):
 
         # execute state update optimistically
         update(self._thermostat)
+        self.update_entity_attributes()
         self.async_write_ha_state()
 
         # wait for remote state to be updated

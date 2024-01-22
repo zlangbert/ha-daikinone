@@ -1,4 +1,5 @@
 import copy
+import json
 import logging
 from datetime import timedelta
 from enum import Enum, auto
@@ -209,7 +210,7 @@ class DaikinOne:
         if cool:
             payload["cspHome"] = cool.celsius
         if override_schedule:
-            payload["schedOverride"] = True
+            payload["schedOverride"] = 1
 
         await self.__req(
             url=f"{DAIKIN_API_URL_DEVICE_DATA}/{thermostat_id}",
@@ -468,7 +469,7 @@ class DaikinOne:
                         await self.__refresh_token()
                         return await self.__req(url, method, body, retry=False)
 
-        raise DaikinServiceException(
-            f"Failed to send request to Daikin API: method={method} url={url} body={body}, response={response}",
-            status=response.status,
-        )
+                raise DaikinServiceException(
+                    f"Failed to send request to Daikin API: method={method} url={url} body={json.dumps(body)}, response_code={response.status} response_body={await response.text()}",
+                    status=response.status,
+                )
