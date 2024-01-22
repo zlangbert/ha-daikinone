@@ -82,6 +82,14 @@ class DaikinOneThermostat(ClimateEntity):
         )
         self._attr_hvac_modes = self.get_hvac_modes()
 
+        # These attributes must be initialized otherwise HA `CachedProperties` doesn't create a
+        # backing prop. If they are not initialized, climate will error during setup because we support
+        # TARGET_TEMPERATURE_RANGE and it tries to read them. These attributes are not initialized in
+        # `ClimateEntity` like most others, and in a case where the thermostat is not set to auto,
+        # they do not get set in async_update either.
+        self._attr_target_temperature_low = None
+        self._attr_target_temperature_high = None
+
     def get_hvac_modes(self) -> list[HVACMode]:
         modes: list[HVACMode] = []
 
@@ -260,10 +268,6 @@ class DaikinOneThermostat(ClimateEntity):
         match self._thermostat.mode:
             case DaikinThermostatMode.AUTO:
                 self._attr_target_temperature_low = self._thermostat.set_point_heat.celsius
-            case _:
-                pass
-        match self._thermostat.mode:
-            case DaikinThermostatMode.AUTO:
                 self._attr_target_temperature_high = self._thermostat.set_point_cool.celsius
             case _:
                 pass
