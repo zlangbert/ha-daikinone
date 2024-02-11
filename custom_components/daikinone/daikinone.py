@@ -65,6 +65,12 @@ class DaikinOutdoorUnitReversingValveStatus(Enum):
     UNKNOWN = 255
 
 
+class DaikinOutdoorUnitHeaterStatus(Enum):
+    OFF = 0
+    ON = 1
+    UNKNOWN = 255
+
+
 @dataclass
 class DaikinOutdoorUnit(DaikinEquipment):
     inverter_software_version: str | None
@@ -92,8 +98,22 @@ class DaikinOutdoorUnit(DaikinEquipment):
     compressor_amps: float
     inverter_amps: float
     fan_motor_amps: float
+    crank_case_heater: DaikinOutdoorUnitHeaterStatus
+    drain_pan_heater: DaikinOutdoorUnitHeaterStatus
+    preheat_heater: DaikinOutdoorUnitHeaterStatus
+
+    # needs confirmation on unit in raw data
+    # preheat_output_watts: int | None
 
     # compressor reduction mode - ctOutdoorCompressorReductionMode - 1=off, ?
+
+
+@dataclass
+class DaikinEEVCoil(DaikinEquipment):
+    indoor_superheat_temperature: Temperature
+    liquid_temperature: Temperature
+    suction_temperature: Temperature
+    pressure_psi: int
 
 
 class DaikinThermostatCapability(Enum):
@@ -361,6 +381,29 @@ class DaikinOne:
                 compressor_amps=payload.data["ctCompressorCurrent"] / 10,
                 inverter_amps=payload.data["ctInverterCurrent"] / 10,
                 fan_motor_amps=payload.data["ctODFanMotorCurrent"] / 10,
+                crank_case_heater=DaikinOutdoorUnitHeaterStatus(payload.data["ctCrankCaseHeaterOnOff"]),
+                drain_pan_heater=DaikinOutdoorUnitHeaterStatus(payload.data["ctDrainPanHeaterOnOff"]),
+                preheat_heater=DaikinOutdoorUnitHeaterStatus(payload.data["ctPreHeatOnOff"]),
+            )
+
+        # eev coil
+        if payload.data["ctCoilUnitType"] < 255:
+            model = "EEV Coil"
+            serial = payload.data["ctCoilSerialNoCharacter1_15"].strip()
+            eid = f"eevcoil-{serial}"
+            name = "EEV Coil"
+
+            equipment[eid] = DaikinEEVCoil(
+                id=eid,
+                thermostat_id=payload.id,
+                name=name,
+                model=model,
+                serial=serial,
+                firmware_version=payload.data["ctCoilControlSoftwareVersion"].strip(),
+                pressure_psi=payload.data["ctEEVCoilPressureSensor"],
+                indoor_superheat_temperature=Temperature.from_fahrenheit(payload.data["ctEEVCoilSuperHeatValue"] / 10),
+                liquid_temperature=Temperature.from_fahrenheit(payload.data["ctEEVCoilSubCoolValue"] / 10),
+                suction_temperature=Temperature.from_fahrenheit(payload.data["ctEEVCoilSuctionTemperature"] / 10),
             )
 
         return equipment
