@@ -1,4 +1,5 @@
 """Constants for the Daikin Skyport integration."""
+
 from datetime import timedelta
 
 from homeassistant.const import Platform
