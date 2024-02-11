@@ -1,5 +1,5 @@
 import logging
-from typing import Callable, TypeVar
+from typing import Callable
 
 from homeassistant.components.sensor import SensorEntity, SensorEntityDescription, SensorDeviceClass, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
@@ -21,7 +21,9 @@ from custom_components.daikinone import DOMAIN, DaikinOneData
 from custom_components.daikinone.const import MANUFACTURER
 from custom_components.daikinone.daikinone import (
     DaikinDevice,
+    DaikinEEVCoil,
     DaikinOutdoorUnitReversingValveStatus,
+    DaikinOutdoorUnitHeaterStatus,
     DaikinThermostat,
     DaikinIndoorUnit,
     DaikinEquipment,
@@ -91,7 +93,7 @@ async def async_setup_entry(
         # equipment sensors
         for equipment in thermostat.equipment.values():
             match equipment:
-                # air handler sensors
+                # air handler / furnance sensors
                 case DaikinIndoorUnit():
                     entities += [
                         DaikinOneEquipmentSensor(
@@ -582,6 +584,111 @@ async def async_setup_entry(
                             )
                         )
 
+                    if equipment.crank_case_heater is not DaikinOutdoorUnitHeaterStatus.UNKNOWN:
+                        entities.append(
+                            DaikinOneEquipmentSensor(
+                                description=SensorEntityDescription(
+                                    key="crank_case_heater",
+                                    name="Crrank Case Heater",
+                                    has_entity_name=True,
+                                    device_class=SensorDeviceClass.ENUM,
+                                ),
+                                data=data,
+                                device=equipment,
+                                attribute=lambda e: e.crank_case_heater.name.capitalize(),
+                            )
+                        )
+
+                    if equipment.drain_pan_heater is not DaikinOutdoorUnitHeaterStatus.UNKNOWN:
+                        entities.append(
+                            DaikinOneEquipmentSensor(
+                                description=SensorEntityDescription(
+                                    key="drain_pan_heater",
+                                    name="Drain Pan Heater",
+                                    has_entity_name=True,
+                                    device_class=SensorDeviceClass.ENUM,
+                                ),
+                                data=data,
+                                device=equipment,
+                                attribute=lambda e: e.drain_pan_heater.name.capitalize(),
+                            )
+                        )
+
+                    if equipment.preheat_heater is not DaikinOutdoorUnitHeaterStatus.UNKNOWN:
+                        entities.append(
+                            DaikinOneEquipmentSensor(
+                                description=SensorEntityDescription(
+                                    key="preheat_heater",
+                                    name="Preheat",
+                                    has_entity_name=True,
+                                    device_class=SensorDeviceClass.ENUM,
+                                ),
+                                data=data,
+                                device=equipment,
+                                attribute=lambda e: e.preheat_heater.name.capitalize(),
+                            )
+                        )
+
+                case DaikinEEVCoil():
+                    entities += [
+                        DaikinOneEquipmentSensor(
+                            description=SensorEntityDescription(
+                                key="indoor_superheat_temperature",
+                                name="Indoor Superheat Temperature",
+                                has_entity_name=True,
+                                state_class=SensorStateClass.MEASUREMENT,
+                                device_class=SensorDeviceClass.TEMPERATURE,
+                                native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+                                icon="mdi:thermometer",
+                            ),
+                            data=data,
+                            device=equipment,
+                            attribute=lambda e: e.indoor_superheat_temperature.celsius,
+                        ),
+                        DaikinOneEquipmentSensor(
+                            description=SensorEntityDescription(
+                                key="liquid_temperature",
+                                name="Liquid Temperature",
+                                has_entity_name=True,
+                                state_class=SensorStateClass.MEASUREMENT,
+                                device_class=SensorDeviceClass.TEMPERATURE,
+                                native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+                                icon="mdi:thermometer",
+                            ),
+                            data=data,
+                            device=equipment,
+                            attribute=lambda e: e.liquid_temperature.celsius,
+                        ),
+                        DaikinOneEquipmentSensor(
+                            description=SensorEntityDescription(
+                                key="suction_temperature",
+                                name="Suction Temperature",
+                                has_entity_name=True,
+                                state_class=SensorStateClass.MEASUREMENT,
+                                device_class=SensorDeviceClass.TEMPERATURE,
+                                native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+                                icon="mdi:thermometer",
+                            ),
+                            data=data,
+                            device=equipment,
+                            attribute=lambda e: e.suction_temperature.celsius,
+                        ),
+                        DaikinOneEquipmentSensor(
+                            description=SensorEntityDescription(
+                                key="pressure",
+                                name="Pressure",
+                                has_entity_name=True,
+                                state_class=SensorStateClass.MEASUREMENT,
+                                device_class=SensorDeviceClass.PRESSURE,
+                                native_unit_of_measurement=UnitOfPressure.PSI,
+                                icon="mdi:pipe",
+                            ),
+                            data=data,
+                            device=equipment,
+                            attribute=lambda e: e.pressure_psi,
+                        ),
+                    ]
+
                 case _:
                     log.warning(f"unexpected equipment: {equipment}")
 
@@ -650,10 +757,7 @@ class DaikinOneThermostatSensor(DaikinOneSensor[DaikinThermostat]):
         self._attr_native_value = self._attribute(self._device)
 
 
-E = TypeVar("E", bound=DaikinEquipment)
-
-
-class DaikinOneEquipmentSensor(DaikinOneSensor[E]):
+class DaikinOneEquipmentSensor[E: DaikinEquipment](DaikinOneSensor[E]):
     def __init__(
         self, description: SensorEntityDescription, data: DaikinOneData, device: E, attribute: Callable[[E], StateType]
     ) -> None:
