@@ -1,5 +1,5 @@
 import logging
-from typing import Callable, Generic, TypeVar
+from typing import Callable, TypeVar
 
 from homeassistant.components.sensor import SensorEntity, SensorEntityDescription, SensorDeviceClass, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
@@ -588,10 +588,7 @@ async def async_setup_entry(
     async_add_entities(entities, True)
 
 
-D = TypeVar("D", covariant=True, bound=DaikinDevice)
-
-
-class DaikinOneSensor(SensorEntity, Generic[D]):
+class DaikinOneSensor[D: DaikinDevice](SensorEntity):
     def __init__(
         self, description: SensorEntityDescription, data: DaikinOneData, device: D, attribute: Callable[[D], StateType]
     ) -> None:
