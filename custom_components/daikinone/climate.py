@@ -58,6 +58,9 @@ class DaikinOneThermostat(ClimateEntity):
 
     _updates_paused: bool = False
 
+    # to be removed in a future version of HA
+    _enable_turn_on_off_backwards_compatibility = False
+
     def __init__(
         self,
         description: ClimateEntityDescription,
@@ -71,7 +74,10 @@ class DaikinOneThermostat(ClimateEntity):
         self._attr_unique_id = f"{self._thermostat.id}-climate"
         self._attr_temperature_unit = UnitOfTemperature.CELSIUS
         self._attr_supported_features = (
-            ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
+            ClimateEntityFeature.TURN_ON
+            | ClimateEntityFeature.TURN_OFF
+            | ClimateEntityFeature.TARGET_TEMPERATURE
+            | ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
         )
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, self._thermostat.id)},
