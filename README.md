@@ -51,6 +51,7 @@ If you have a Daikin One+ system and your equipment is not listed here, please o
 ### Heat Pumps
 
 * [DZ9VC](https://daikincomfort.com/products/heating-cooling/whole-house/heat-pump/dz9vc)
+* [DZ6VS](https://daikincomfort.com/products/heating-cooling/whole-house/heat-pump/daikin-fit-heat-pump-dz6vs)
 
 ### Air Conditioners
 
@@ -58,6 +59,7 @@ If you have a Daikin One+ system and your equipment is not listed here, please o
 
 ### Furnaces
 
+* [DM97MC](https://daikincomfort.com/products/heating-cooling/whole-house/gas-furnaces/dm97mc)
 * [DM80VC](https://daikincomfort.com/products/heating-cooling/whole-house/gas-furnaces/dm80vc)
 
 ## Installation
