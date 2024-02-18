@@ -21,6 +21,7 @@ A custom component for Home Assistant to integrate with Daikin One+ smart HVAC s
 ## Features
 
 * Controllable climate entities for each thermostat
+* All HVAC modes supported by the Daikin One+ system, including Emergency Heat
 * Intelligent handling of thermostat updates for ultra-fast response times
 * Sensors for status, temperatures, airflow, demand, etc. for all connected equipment
 
@@ -38,7 +39,7 @@ Dashboard source can be found [here](docs/dashboard.yaml) if you'd like you use 
 
 The following is the list of currently confirmed working equipment.
 
-If you have a Daikin One+ system and your equipment is not listed here, please open an issue and we can work on adding support. Your raw Daikin API data can be retrieved by clicking "Download Diagnostics" on a thermostat's device page in Home Assistant. That information will be required to add support for your equipment. 
+If you have a Daikin One+ system and your equipment is not listed here, please open an issue and we can work on adding support. Your raw Daikin API data can be retrieved by clicking "Download Diagnostics" on a thermostat's device page in Home Assistant. That information will be required to add support for your equipment.
 
 ### Thermostats
 
