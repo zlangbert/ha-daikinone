@@ -119,6 +119,7 @@ class DaikinEEVCoil(DaikinEquipment):
 class DaikinThermostatCapability(Enum):
     HEAT = auto()
     COOL = auto()
+    EMERGENCY_HEAT = auto()
 
 
 class DaikinThermostatMode(Enum):
@@ -252,6 +253,8 @@ class DaikinOne:
             capabilities.add(DaikinThermostatCapability.HEAT)
         if payload.data["ctSystemCapCool"]:
             capabilities.add(DaikinThermostatCapability.COOL)
+        if payload.data["ctSystemCapEmergencyHeat"]:
+            capabilities.add(DaikinThermostatCapability.EMERGENCY_HEAT)
 
         schedule = DaikinThermostatSchedule(enabled=payload.data["schedEnabled"])
 
