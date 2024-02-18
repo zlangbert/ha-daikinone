@@ -20,7 +20,7 @@
         "state_attributes": {
           "preset_mode": {
             "state": {
-              "emergency_heat": "Emergency Heat"
+              "emergency_heat": "Emergency heat"
             }
           }
         }
