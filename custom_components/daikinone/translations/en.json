@@ -13,5 +13,18 @@
     "error": {
       "auth_failed": "Authentication failed, please check your credentials and try again. Check the logs for more info."
     }
+  },
+  "entity": {
+    "climate": {
+      "daikinone_thermostat": {
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "emergency_heat": "Emergency heat"
+            }
+          }
+        }
+      }
+    }
   }
 }

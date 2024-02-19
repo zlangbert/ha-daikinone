@@ -1,3 +1,4 @@
+from enum import Enum
 import logging
 from typing import Callable
 
@@ -50,6 +51,11 @@ async def async_setup_entry(
     async_add_entities(entities, True)
 
 
+class DaikinOneThermostatPresetMode(Enum):
+    NONE = "none"
+    EMERGENCY_HEAT = "emergency_heat"
+
+
 class DaikinOneThermostat(ClimateEntity):
     """Thermostat entity for Daikin One"""
 
@@ -71,6 +77,7 @@ class DaikinOneThermostat(ClimateEntity):
         self._data = data
         self._thermostat = thermostat
 
+        self._attr_translation_key = "daikinone_thermostat"
         self._attr_unique_id = f"{self._thermostat.id}-climate"
         self._attr_temperature_unit = UnitOfTemperature.CELSIUS
         self._attr_supported_features = (
@@ -79,6 +86,8 @@ class DaikinOneThermostat(ClimateEntity):
             | ClimateEntityFeature.TARGET_TEMPERATURE
             | ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
         )
+        self._attr_hvac_modes = self.get_hvac_modes()
+
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, self._thermostat.id)},
             name=f"{self._thermostat.name} Thermostat",
@@ -86,7 +95,6 @@ class DaikinOneThermostat(ClimateEntity):
             model=self._thermostat.model,
             sw_version=self._thermostat.firmware_version,
         )
-        self._attr_hvac_modes = self.get_hvac_modes()
 
         # These attributes must be initialized otherwise HA `CachedProperties` doesn't create a
         # backing prop. If they are not initialized, climate will error during setup because we support
@@ -95,6 +103,15 @@ class DaikinOneThermostat(ClimateEntity):
         # they do not get set in async_update either.
         self._attr_target_temperature_low = None
         self._attr_target_temperature_high = None
+
+        # Set up preset modes based on thermostat capabilities. The preset climate feature will only be
+        # enabled if at least one preset is detected as supported.
+        self._attr_preset_modes = [DaikinOneThermostatPresetMode.NONE.value]
+        self._attr_preset_mode = None
+
+        if DaikinThermostatCapability.EMERGENCY_HEAT in self._thermostat.capabilities:
+            self._attr_supported_features |= ClimateEntityFeature.PRESET_MODE
+            self._attr_preset_modes += [DaikinOneThermostatPresetMode.EMERGENCY_HEAT.value]
 
     def get_hvac_modes(self) -> list[HVACMode]:
         modes: list[HVACMode] = []
@@ -129,6 +146,9 @@ class DaikinOneThermostat(ClimateEntity):
             case _:
                 raise ValueError(f"Attempted to set unsupported HVAC mode: {hvac_mode}")
 
+        await self.set_thermostat_mode(target_mode)
+
+    async def set_thermostat_mode(self, target_mode: DaikinThermostatMode) -> None:
         log.debug("Setting thermostat mode to %s", target_mode)
 
         # update thermostat mode
@@ -142,6 +162,28 @@ class DaikinOneThermostat(ClimateEntity):
             update=update,
             check=lambda t: t.mode == target_mode,
         )
+
+    async def async_set_preset_mode(self, preset_mode: str):
+        """Set new target preset mode."""
+        match preset_mode:
+
+            case DaikinOneThermostatPresetMode.EMERGENCY_HEAT.value:
+                await self.set_thermostat_mode(DaikinThermostatMode.AUX_HEAT)
+
+            case DaikinOneThermostatPresetMode.NONE.value:
+                match self._thermostat.mode:
+
+                    # turning off emergency heat should set the thermostat mode to heat
+                    case DaikinThermostatMode.AUX_HEAT:
+                        await self.set_thermostat_mode(DaikinThermostatMode.HEAT)
+
+                    # any other thermostat mode should already be "none", and if its not,
+                    # we don't need to do anything
+                    case _:
+                        pass
+
+            case _:
+                raise ValueError(f"Attempted to set unsupported preset mode: {preset_mode}")
 
     async def async_set_temperature(self, **kwargs: float) -> None:
         """Set new target temperature(s)."""
@@ -232,6 +274,8 @@ class DaikinOneThermostat(ClimateEntity):
         self._attr_current_temperature = self._thermostat.indoor_temperature.celsius
         self._attr_current_humidity = self._thermostat.indoor_humidity
 
+        # hvac current mode and preset
+        self._attr_preset_mode = DaikinOneThermostatPresetMode.NONE.value
         match self._thermostat.mode:
             case DaikinThermostatMode.AUTO:
                 self._attr_hvac_mode = HVACMode.HEAT_COOL
@@ -241,6 +285,7 @@ class DaikinOneThermostat(ClimateEntity):
                 self._attr_hvac_mode = HVACMode.COOL
             case DaikinThermostatMode.AUX_HEAT:
                 self._attr_hvac_mode = HVACMode.HEAT
+                self._attr_preset_mode = DaikinOneThermostatPresetMode.EMERGENCY_HEAT.value
             case DaikinThermostatMode.OFF:
                 self._attr_hvac_mode = HVACMode.OFF
 
