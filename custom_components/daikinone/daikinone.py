@@ -289,7 +289,7 @@ class DaikinOne:
         if payload.data["ctAHUnitType"] < 255:
             model = payload.data["ctAHModelNoCharacter1_15"].strip()
             serial = payload.data["ctAHSerialNoCharacter1_15"].strip()
-            eid = f"{model}-{serial}"
+            eid = f"{payload.id}-{model}-{serial}"
             name = "Air Handler"
 
             equipment[eid] = DaikinIndoorUnit(
@@ -316,7 +316,7 @@ class DaikinOne:
         if payload.data["ctIFCUnitType"] < 255:
             model = payload.data["ctIFCModelNoCharacter1_15"].strip()
             serial = payload.data["ctIFCSerialNoCharacter1_15"].strip()
-            eid = f"{model}-{serial}"
+            eid = f"{payload.id}-{model}-{serial}"
             name = "Furnace"
 
             equipment[eid] = DaikinIndoorUnit(
@@ -343,7 +343,7 @@ class DaikinOne:
         if payload.data["ctOutdoorUnitType"] < 255:
             model = payload.data["ctOutdoorModelNoCharacter1_15"].strip()
             serial = payload.data["ctOutdoorSerialNoCharacter1_15"].strip()
-            eid = f"{model}-{serial}"
+            eid = f"{payload.id}-{model}-{serial}"
 
             # assume it can cool, and if it can also heat it should be a heat pump
             name = "Condensing Unit"
@@ -393,7 +393,7 @@ class DaikinOne:
         if payload.data["ctCoilUnitType"] < 255:
             model = "EEV Coil"
             serial = payload.data["ctCoilSerialNoCharacter1_15"].strip()
-            eid = f"eevcoil-{serial}"
+            eid = f"{payload.id}-eevcoil-{serial}"
             name = "EEV Coil"
 
             equipment[eid] = DaikinEEVCoil(
