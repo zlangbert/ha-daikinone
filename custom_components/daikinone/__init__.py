@@ -6,7 +6,12 @@ from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
 from homeassistant.core import HomeAssistant
 from homeassistant.util import Throttle
 
-from custom_components.daikinone.const import PLATFORMS, DOMAIN, MIN_TIME_BETWEEN_UPDATES
+from custom_components.daikinone.const import (
+    CONF_OPTION_ENTITY_UID_SCHEMA_VERSION_KEY,
+    PLATFORMS,
+    DOMAIN,
+    MIN_TIME_BETWEEN_UPDATES,
+)
 from custom_components.daikinone.daikinone import DaikinOne, DaikinUserCredentials
 
 log = logging.getLogger(__name__)
@@ -56,3 +61,32 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if ok:
         hass.data.pop(DOMAIN)
     return ok
+
+
+async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Migrate old entry."""
+    log.debug("Migrating from version %s.%s", entry.version, entry.minor_version)
+
+    if entry.version > 1:
+        log.error(
+            "Incompatible downgrade detected, please restore from a earlier backup or remove and re-add the integration",
+            entry.version,
+            entry.minor_version,
+        )
+        return False
+
+    if entry.version == 1:
+        new = {**entry.data}
+
+        # migrate to 1.2
+        if entry.minor_version < 2:
+            entry.minor_version = 2
+
+            # retain legacy id schema if this is an upgrade of an existing entry
+            new[CONF_OPTION_ENTITY_UID_SCHEMA_VERSION_KEY] = 0
+
+        hass.config_entries.async_update_entry(entry, data=new)
+
+    log.info("Migration to version %s.%s successful", entry.version, entry.minor_version)
+
+    return True
