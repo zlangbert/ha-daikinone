@@ -18,7 +18,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import StateType
 
 from custom_components.daikinone import DOMAIN, DaikinOneData
-from custom_components.daikinone.const import MANUFACTURER
+from custom_components.daikinone.const import CONF_OPTION_ENTITY_UID_SCHEMA_VERSION_KEY, MANUFACTURER
 from custom_components.daikinone.daikinone import (
     DaikinDevice,
     DaikinEEVCoil,
@@ -706,7 +706,6 @@ class DaikinOneSensor[D: DaikinDevice](SensorEntity):
         self._device: D = device
         self._attribute = attribute
 
-        self._attr_unique_id = f"{self._device.id}-{self.name}"
         self._attr_device_info = self.get_device_info()
 
     def get_device_info(self) -> DeviceInfo | None:
@@ -746,6 +745,14 @@ class DaikinOneThermostatSensor(DaikinOneSensor[DaikinThermostat]):
     ) -> None:
         super().__init__(description, data, device, attribute)
 
+        match data.entry.data[CONF_OPTION_ENTITY_UID_SCHEMA_VERSION_KEY]:
+            case 0:
+                self._attr_unique_id = f"{self._device.id}-{self.name}"
+            case 1:
+                self._attr_unique_id = f"{self._device.id}-{self.entity_description.key}"
+            case _:
+                raise ValueError("unexpected entity uid schema version")
+
     @property
     def device_name(self) -> str:
         return f"{self._device.name} Thermostat"
@@ -762,6 +769,14 @@ class DaikinOneEquipmentSensor[E: DaikinEquipment](DaikinOneSensor[E]):
         self, description: SensorEntityDescription, data: DaikinOneData, device: E, attribute: Callable[[E], StateType]
     ) -> None:
         super().__init__(description, data, device, attribute)
+
+        match data.entry.data[CONF_OPTION_ENTITY_UID_SCHEMA_VERSION_KEY]:
+            case 0:
+                self._attr_unique_id = f"{self._device.id}-{self.name}"
+            case 1:
+                self._attr_unique_id = f"{self._device.thermostat_id}-{self._device.id}-{self.entity_description.key}"
+            case _:
+                raise ValueError("unexpected entity uid schema version")
 
     @property
     def device_name(self) -> str:

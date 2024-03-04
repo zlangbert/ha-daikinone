@@ -256,8 +256,6 @@ class DaikinOne:
         if payload.data["ctSystemCapEmergencyHeat"]:
             capabilities.add(DaikinThermostatCapability.EMERGENCY_HEAT)
 
-        schedule = DaikinThermostatSchedule(enabled=payload.data["schedEnabled"])
-
         thermostat = DaikinThermostat(
             id=payload.id,
             location_id=payload.locationId,
@@ -268,7 +266,7 @@ class DaikinOne:
             capabilities=capabilities,
             mode=DaikinThermostatMode(payload.data["mode"]),
             status=DaikinThermostatStatus(payload.data["equipmentStatus"]),
-            schedule=schedule,
+            schedule=DaikinThermostatSchedule(enabled=payload.data["schedEnabled"]),
             indoor_temperature=Temperature.from_celsius(payload.data["tempIndoor"]),
             indoor_humidity=payload.data["humIndoor"],
             set_point_heat=Temperature.from_celsius(payload.data["hspActive"]),
