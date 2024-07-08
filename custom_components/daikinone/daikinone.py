@@ -138,6 +138,23 @@ class DaikinThermostatStatus(Enum):
     IDLE = 5
 
 
+class DaikinFan(Enum):
+    AUTO = 0
+    ON = 1
+
+
+class DaikinFanMode(Enum):
+    OFF = 0
+    ALWAYS_ON = 1
+    SCHEDULE = 2
+
+
+class DaikinFanSpeed(Enum):
+    LOW = 0
+    MEDIUM = 1
+    HIGH = 2
+
+
 @dataclass
 class DaikinThermostatSchedule:
     enabled: bool
@@ -151,6 +168,9 @@ class DaikinThermostat(DaikinDevice):
     mode: DaikinThermostatMode
     status: DaikinThermostatStatus
     schedule: DaikinThermostatSchedule
+    fan: DaikinFan
+    fan_mode: DaikinFanMode
+    fan_speed: DaikinFanSpeed
     indoor_temperature: Temperature
     indoor_humidity: int
     set_point_heat: Temperature
@@ -212,6 +232,22 @@ class DaikinOne:
             url=f"{DAIKIN_API_URL_DEVICE_DATA}/{thermostat_id}",
             method="PUT",
             body={"mode": mode.value},
+        )
+
+    async def set_fan_mode(self, thermostat_id: str, mode: int) -> None:
+        """Set fan mode"""
+        await self.__req(
+            url=f"{DAIKIN_API_URL_DEVICE_DATA}/{thermostat_id}",
+            method="PUT",
+            body={"fanCirculate": mode},
+        )
+
+    async def set_fan_speed(self, thermostat_id: str, mode: int) -> None:
+        """Set fan speed"""
+        await self.__req(
+            url=f"{DAIKIN_API_URL_DEVICE_DATA}/{thermostat_id}",
+            method="PUT",
+            body={"fanCirculateSpeed": mode},
         )
 
     async def set_thermostat_home_set_points(
@@ -276,6 +312,9 @@ class DaikinOne:
             set_point_cool_min=Temperature.from_celsius(payload.data["EquipProtocolMinCoolSetpoint"]),
             set_point_cool_max=Temperature.from_celsius(payload.data["EquipProtocolMaxCoolSetpoint"]),
             equipment=self.__map_equipment(payload),
+            fan=DaikinFan(payload.data["fan"]),
+            fan_mode=DaikinFanMode(payload.data["fanCirculate"]),
+            fan_speed=DaikinFanSpeed(payload.data["fanCirculateSpeed"]),
         )
 
         return thermostat

@@ -12,6 +12,15 @@ from homeassistant.components.climate import (
     ATTR_TARGET_TEMP_LOW,
     ATTR_TARGET_TEMP_HIGH,
 )
+from homeassistant.components.climate.const import (
+    FAN_AUTO,
+    FAN_ON,
+    FAN_LOW,
+    FAN_MEDIUM,
+    FAN_HIGH,
+)
+from custom_components.daikinone.const import (FAN_SCHEDULE)
+
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfTemperature, ATTR_TEMPERATURE
 from homeassistant.core import HomeAssistant
@@ -25,11 +34,22 @@ from custom_components.daikinone.daikinone import (
     DaikinThermostatCapability,
     DaikinThermostatMode,
     DaikinThermostatStatus,
+    DaikinFan,
+    DaikinFanMode,
+    DaikinFanSpeed,
 )
 from custom_components.daikinone.utils import Temperature
 
-log = logging.getLogger(__name__)
+DaikinFanModeMap: dict[str, int] = {
+    FAN_AUTO: 0,
+    FAN_ON: 1,
+    FAN_SCHEDULE: 2,
+    FAN_LOW: 0,
+    FAN_MEDIUM: 1,
+    FAN_HIGH: 2,
+}
 
+log = logging.getLogger(__name__)
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -85,8 +105,13 @@ class DaikinOneThermostat(ClimateEntity):
             | ClimateEntityFeature.TURN_OFF
             | ClimateEntityFeature.TARGET_TEMPERATURE
             | ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
+            | ClimateEntityFeature.FAN_MODE
         )
         self._attr_hvac_modes = self.get_hvac_modes()
+
+        # Adding fan support
+        self._attr_fan_modes = [FAN_AUTO, FAN_ON, FAN_SCHEDULE, FAN_LOW, FAN_MEDIUM, FAN_HIGH]    
+        self._attr_fan_mode = None
 
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, self._thermostat.id)},
@@ -108,7 +133,7 @@ class DaikinOneThermostat(ClimateEntity):
         # enabled if at least one preset is detected as supported.
         self._attr_preset_modes = [DaikinOneThermostatPresetMode.NONE.value]
         self._attr_preset_mode = None
-
+        
         if DaikinThermostatCapability.EMERGENCY_HEAT in self._thermostat.capabilities:
             self._attr_supported_features |= ClimateEntityFeature.PRESET_MODE
             self._attr_preset_modes += [DaikinOneThermostatPresetMode.EMERGENCY_HEAT.value]
@@ -162,6 +187,20 @@ class DaikinOneThermostat(ClimateEntity):
             update=update,
             check=lambda t: t.mode == target_mode,
         )
+
+    async def async_set_fan_mode(self, fan_mode):
+        """Set new target fan mode."""
+        log.debug("Setting thermostat fan mode to %s", fan_mode)
+        if fan_mode in {FAN_ON, FAN_AUTO, FAN_SCHEDULE}:
+            # update fan mode
+            await self._data.daikin.set_fan_mode(self._thermostat.id, DaikinFanModeMap.get(fan_mode))        
+        elif fan_mode in {FAN_LOW, FAN_MEDIUM, FAN_HIGH}:
+            # update fan speed
+            if self._attr_fan_mode == FAN_AUTO:
+                await self._data.daikin.set_fan_mode(self._thermostat.id, DaikinFanModeMap.get(FAN_ON))        
+            await self._data.daikin.set_fan_speed(self._thermostat.id, DaikinFanModeMap.get(fan_mode)) 
+        else:
+            raise ValueError("At least one of heat or cool set points must be set")
 
     async def async_set_preset_mode(self, preset_mode: str):
         """Set new target preset mode."""
@@ -331,6 +370,26 @@ class DaikinOneThermostat(ClimateEntity):
             self._thermostat.set_point_heat_max.celsius,
             self._thermostat.set_point_cool_max.celsius,
         )
+
+        # Fan mode.
+        self._attr_fan_mode = FAN_AUTO
+        if self._thermostat.fan == DaikinFan.AUTO and self._thermostat.fan_mode == DaikinFanMode.OFF:
+            self._attr_fan_mode = FAN_AUTO
+        elif self._thermostat.fan_mode == DaikinFanMode.SCHEDULE:
+            self._attr_fan_mode = FAN_SCHEDULE
+        elif self._thermostat.fan_mode == DaikinFanMode.OFF:
+            self._attr_fan_mode = FAN_OFF
+        elif self._thermostat.fan_speed == DaikinFanSpeed.LOW:
+            self._attr_fan_mode = FAN_LOW
+        elif self._thermostat.fan_speed == DaikinFanSpeed.MEDIUM:
+            self._attr_fan_mode = FAN_MEDIUM
+        elif self._thermostat.fan_speed == DaikinFanSpeed.HIGH:
+            self._attr_fan_mode = FAN_HIGH
+
+        log.debug("fan: %s", self._thermostat.fan )
+        log.debug("fan_mode: %s", self._thermostat.fan_mode )
+        log.debug("fan_speed: %s", self._thermostat.fan_speed )
+
 
     async def update_state_optimistically(
         self, update: Callable[[DaikinThermostat], None], check: Callable[[DaikinThermostat], bool]

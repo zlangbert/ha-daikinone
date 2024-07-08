@@ -15,3 +15,5 @@ PLATFORMS = [
 MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=30)
 
 CONF_OPTION_ENTITY_UID_SCHEMA_VERSION_KEY = "entity_uid_schema_version"
+
+FAN_SCHEDULE = "Schedule"
