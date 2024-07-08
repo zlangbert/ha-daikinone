@@ -200,7 +200,7 @@ class DaikinOneThermostat(ClimateEntity):
                 await self._data.daikin.set_fan_mode(self._thermostat.id, DaikinFanModeMap.get(FAN_ON))        
             await self._data.daikin.set_fan_speed(self._thermostat.id, DaikinFanModeMap.get(fan_mode)) 
         else:
-            raise ValueError("At least one of heat or cool set points must be set")
+            raise ValueError("Wrong fan mode received")
 
     async def async_set_preset_mode(self, preset_mode: str):
         """Set new target preset mode."""

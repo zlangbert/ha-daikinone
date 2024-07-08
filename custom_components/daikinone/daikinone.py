@@ -242,12 +242,12 @@ class DaikinOne:
             body={"fanCirculate": mode},
         )
 
-    async def set_fan_speed(self, thermostat_id: str, mode: int) -> None:
+    async def set_fan_speed(self, thermostat_id: str, speed: int) -> None:
         """Set fan speed"""
         await self.__req(
             url=f"{DAIKIN_API_URL_DEVICE_DATA}/{thermostat_id}",
             method="PUT",
-            body={"fanCirculateSpeed": mode},
+            body={"fanCirculateSpeed": speed},
         )
 
     async def set_thermostat_home_set_points(
@@ -533,7 +533,7 @@ class DaikinOne:
         if self.__auth.authenticated is not True:
             await self.login()
 
-        log.debug(f"Sending request to Daikin API: {method} {url}")
+        log.debug(f"Sending request to Daikin API: {method} {url} {body}")
         async with aiohttp.ClientSession(
             headers={
                 "Accept": "application/json",
