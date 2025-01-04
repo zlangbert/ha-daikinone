@@ -1,5 +1,6 @@
 from typing import Any
-
+from pydantic import GetCoreSchemaHandler
+from pydantic_core import core_schema
 
 class Temperature:
     """A class representing a temperature value in various units.
@@ -48,18 +49,21 @@ class Temperature:
         return round(self._temp_c + 273.15, 1)
 
     @classmethod
-    def __get_validators__(cls):
-        yield cls.validate
+    def __get_pydantic_core_schema__(cls, source: Any, handler: GetCoreSchemaHandler) -> core_schema.CoreSchema:
+        """Define the core schema for Pydantic v2 compatibility."""
+        return core_schema.no_info_after_validator_function(
+            cls.validate, core_schema.any_schema()
+        )
 
     @classmethod
-    def validate(cls, v: Any) -> "Temperature":
-        if not isinstance(v, cls):
-            raise TypeError(f"Expected an instance of Temperature, received {type(v)}")
-
-        if not hasattr(v, "_temp_c") or getattr(v, "_temp_c") is None:
-            raise TypeError("Temperature instance is not initialized")
-
-        return v
+    def validate(cls, value: Any, field: core_schema.FieldValidationInfo = None) -> "Temperature":
+        """Validate the input and convert it to a Temperature instance if necessary."""
+        if isinstance(value, cls):
+            return value  # Already a Temperature instance
+        elif isinstance(value, (int, float)):
+            return cls.from_celsius(float(value))
+        else:
+            raise TypeError(f"Cannot validate Temperature from type {type(value)}")
 
     def __eq__(self, o: object) -> bool:
         return isinstance(o, Temperature) and self._temp_c == o._temp_c
