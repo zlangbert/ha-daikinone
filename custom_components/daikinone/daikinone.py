@@ -365,7 +365,7 @@ class DaikinOne:
                 suction_pressure_psi=payload.data["ctOutdoorSuctionPressure"],
                 eev_opening_percent=payload.data["ctOutdoorEEVOpening"],
                 reversing_valve=DaikinOutdoorUnitReversingValveStatus(payload.data["ctReversingValve"]),
-                heat_demand_percent=round(payload.data["ctOutdoorHeatRequestedDemand"] / 2, 1),
+                heat_demand_percent=int(round(payload.data["ctOutdoorHeatRequestedDemand"] / 2)),
                 cool_demand_percent=round(payload.data["ctOutdoorCoolRequestedDemand"] / 2, 1),
                 fan_demand_percent=round(payload.data["ctOutdoorFanRequestedDemandPercentage"] / 2, 1),
                 fan_demand_airflow=payload.data["ctOutdoorRequestedIndoorAirflow"],
