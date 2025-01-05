@@ -24,6 +24,7 @@ A custom component for Home Assistant to integrate with Daikin One+ smart HVAC s
 * All HVAC modes supported by the Daikin One+ system, including Emergency Heat
 * Intelligent handling of thermostat updates for ultra-fast response times
 * Sensors for status, temperatures, airflow, demand, etc. for all connected equipment
+* Outdoor and indoor air quality sensors (if reported by your system)
 
 <img src="docs/dashboard.png" width="350" alt="dashboard example">
 
@@ -32,7 +33,6 @@ Dashboard source can be found [here](docs/dashboard.yaml) if you'd like you use 
 ## Todo
 
 * Weather entities for each thermostat
-* Outdoor air quality
 * Support for additional equipment types
 
 ## Supported Equipment
