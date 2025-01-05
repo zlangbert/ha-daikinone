@@ -3,28 +3,17 @@ name = "ha-daikinone"
 version = "0.1.0"
 description = "Daikin One+ integration for Home Assistant"
 authors = [{ name = "Zach Langbert", email = "zach.langbert@gmail.com" }]
-dependencies = [
-    "homeassistant~=2024.2.0",
-    "pydantic~=1.10.12",
-    "backoff~=2.2.1",
-]
+dependencies = ["homeassistant~=2024.5.1", "pydantic~=2.10.4", "backoff~=2.2.1"]
 readme = "README.md"
 requires-python = ">= 3.12"
 
-[tool.rye]
-managed = true
+[tool.uv]
 dev-dependencies = [
     "setuptools>=69.0.3",
-    "ruff>=0.2.1    ",
+    "ruff>=0.2.1",
     "pyright>=1.1.350",
     "black[d]>=24.1.1",
 ]
-
-[tool.rye.scripts]
-start = "nodemon --signal SIGTERM -w . -e 'py,json' -x 'docker compose up'"
-
-[tool.hatch.metadata]
-allow-direct-references = true
 
 [tool.pyright]
 venvPath = "."

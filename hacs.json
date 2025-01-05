@@ -1,5 +1,5 @@
 {
-  "name": "Daikin One",
-  "homeassistant": "2024.2.0",
-  "render_readme": true
+	"name": "Daikin One",
+	"homeassistant": "2024.5.1",
+	"render_readme": true
 }

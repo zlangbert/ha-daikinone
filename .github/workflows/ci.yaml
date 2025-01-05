@@ -20,22 +20,13 @@ jobs:
         key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
         restore-keys: |
           ${{ runner.os }}-pip-
-    - name: Install Rye
-      run: |
-        wget -qO /tmp/rye.gz https://github.com/mitsuhiko/rye/releases/latest/download/rye-x86_64-linux.gz
-        gunzip /tmp/rye.gz
-        chmod +x /tmp/rye
-        mv /tmp/rye /usr/local/bin/rye
-        mkdir -p $HOME/.rye
-        
-        echo "$HOME/.rye/shims" >> $GITHUB_PATH
-        rye --version
-        rye show
-    - name: Rye Sync
-      run: rye sync
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
+    - name: Sync
+      run: uv sync
     - name: Type Check
-      run: rye run pyright
+      run: uv run pyright
     - name: Lint
-      run: rye run ruff check .
+      run: uv run ruff check .
     - name: Format Check
-      run: rye run black --check custom_components
+      run: uv run black --check custom_components

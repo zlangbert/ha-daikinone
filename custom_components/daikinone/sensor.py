@@ -1,7 +1,8 @@
 import logging
 from typing import Callable
 
-from homeassistant.components.sensor import SensorEntity, SensorEntityDescription, SensorDeviceClass, SensorStateClass
+from homeassistant.components.sensor import SensorEntity, SensorEntityDescription
+from homeassistant.components.sensor.const import SensorDeviceClass, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     EntityCategory,
@@ -13,7 +14,7 @@ from homeassistant.const import (
     UnitOfElectricCurrent,
 )
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import StateType
 
@@ -787,5 +788,6 @@ class DaikinOneEquipmentSensor[E: DaikinEquipment](DaikinOneSensor[E]):
         """Get the latest state of the sensor."""
         await self._data.update()
         thermostat = self._data.daikin.get_thermostat(self._device.thermostat_id)
-        self._device = thermostat.equipment[self._device.id]
+        # TODO: look at this type issue more later
+        self._device = thermostat.equipment[self._device.id]  # type: ignore[assignment]
         self._attr_native_value = self._attribute(self._device)
