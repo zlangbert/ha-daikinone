@@ -6,6 +6,8 @@ import backoff
 from homeassistant.components.climate import (
     ClimateEntity,
     ClimateEntityDescription,
+)
+from homeassistant.components.climate.const import (
     HVACMode,
     ClimateEntityFeature,
     HVACAction,
@@ -15,7 +17,7 @@ from homeassistant.components.climate import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfTemperature, ATTR_TEMPERATURE
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from custom_components.daikinone import DaikinOneData, DOMAIN

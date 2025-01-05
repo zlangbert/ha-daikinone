@@ -1,7 +1,7 @@
-from typing import Any
+from pydantic import BaseModel
 
 
-class Temperature:
+class Temperature(BaseModel):
     """A class representing a temperature value in various units.
 
     It is intended to be instantiated via its static methods:
@@ -46,20 +46,6 @@ class Temperature:
     @property
     def kelvin(self) -> float:
         return round(self._temp_c + 273.15, 1)
-
-    @classmethod
-    def __get_validators__(cls):
-        yield cls.validate
-
-    @classmethod
-    def validate(cls, v: Any) -> "Temperature":
-        if not isinstance(v, cls):
-            raise TypeError(f"Expected an instance of Temperature, received {type(v)}")
-
-        if not hasattr(v, "_temp_c") or getattr(v, "_temp_c") is None:
-            raise TypeError("Temperature instance is not initialized")
-
-        return v
 
     def __eq__(self, o: object) -> bool:
         return isinstance(o, Temperature) and self._temp_c == o._temp_c
