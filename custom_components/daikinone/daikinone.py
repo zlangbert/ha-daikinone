@@ -108,6 +108,33 @@ class DaikinOutdoorUnit(DaikinEquipment):
     # compressor reduction mode - ctOutdoorCompressorReductionMode - 1=off, ?
 
 
+class DaikinOneAirQualitySensorSummaryLevel(Enum):
+    GOOD = 0
+    MODERATE = 1
+    UNHEALTHY = 2
+    # The app shows 3 as "Unhealthy" but with a red color instead of orange, so we will call it "Hazardous"
+    HAZARDOUS = 3
+
+
+@dataclass
+class DaikinOneAirQualitySensorOutdoor:
+    aqi: int
+    aqi_summary_level: DaikinOneAirQualitySensorSummaryLevel
+    particles_microgram_m3: int
+    ozone_ppb: int
+
+
+@dataclass
+class DaikinOneAirQualitySensorIndoor:
+    aqi: int
+    aqi_summary_level: DaikinOneAirQualitySensorSummaryLevel
+    # TODO: see if there is unit data available from somewhere
+    particles: int
+    particles_summary_level: DaikinOneAirQualitySensorSummaryLevel
+    voc: int
+    voc_summary_level: DaikinOneAirQualitySensorSummaryLevel
+
+
 @dataclass
 class DaikinEEVCoil(DaikinEquipment):
     indoor_superheat_temperature: Temperature
@@ -159,6 +186,8 @@ class DaikinThermostat(DaikinDevice):
     set_point_cool: Temperature
     set_point_cool_min: Temperature
     set_point_cool_max: Temperature
+    air_quality_outdoor: DaikinOneAirQualitySensorOutdoor | None
+    air_quality_indoor: DaikinOneAirQualitySensorIndoor | None
     equipment: dict[str, DaikinEquipment]
 
 
@@ -275,10 +304,36 @@ class DaikinOne:
             set_point_cool=Temperature.from_celsius(payload.data["cspActive"]),
             set_point_cool_min=Temperature.from_celsius(payload.data["EquipProtocolMinCoolSetpoint"]),
             set_point_cool_max=Temperature.from_celsius(payload.data["EquipProtocolMaxCoolSetpoint"]),
+            air_quality_outdoor=self.__map_air_quality_outdoor(payload),
+            air_quality_indoor=self.__map_air_quality_indoor(payload),
             equipment=self.__map_equipment(payload),
         )
 
         return thermostat
+
+    def __map_air_quality_outdoor(self, payload: DaikinDeviceDataResponse) -> DaikinOneAirQualitySensorOutdoor | None:
+        if not payload.data["aqOutdoorAvailable"]:
+            return None
+
+        return DaikinOneAirQualitySensorOutdoor(
+            aqi=payload.data["aqOutdoorValue"],
+            aqi_summary_level=payload.data["aqOutdoorLevel"],
+            particles_microgram_m3=payload.data["aqOutdoorParticles"],
+            ozone_ppb=payload.data["aqOutdoorOzone"],
+        )
+
+    def __map_air_quality_indoor(self, payload: DaikinDeviceDataResponse) -> DaikinOneAirQualitySensorIndoor | None:
+        if not payload.data["aqIndoorAvailable"]:
+            return None
+
+        return DaikinOneAirQualitySensorIndoor(
+            aqi=payload.data["aqIndoorValue"],
+            aqi_summary_level=payload.data["aqIndoorLevel"],
+            particles=payload.data["aqIndoorParticles"],
+            particles_summary_level=payload.data["aqIndoorParticlesLevel"],
+            voc=payload.data["aqIndoorVOC"],
+            voc_summary_level=payload.data["aqIndoorVOCLevel"],
+        )
 
     def __map_equipment(self, payload: DaikinDeviceDataResponse) -> dict[str, DaikinEquipment]:
         equipment: dict[str, DaikinEquipment] = {}

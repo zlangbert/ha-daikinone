@@ -12,6 +12,8 @@ from homeassistant.const import (
     UnitOfTime,
     UnitOfPressure,
     UnitOfElectricCurrent,
+    CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
+    CONCENTRATION_PARTS_PER_BILLION,
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
@@ -90,6 +92,163 @@ async def async_setup_entry(
                 attribute=lambda d: d.indoor_humidity,
             ),
         ]
+
+        if thermostat.air_quality_outdoor is not None:
+            entities += [
+                DaikinOneThermostatSensor(
+                    description=SensorEntityDescription(
+                        key="outdoor_air_quality_index",
+                        name="Outdoor Air Quality Index",
+                        has_entity_name=True,
+                        state_class=SensorStateClass.MEASUREMENT,
+                        device_class=SensorDeviceClass.AQI,
+                        icon="mdi:air-filter",
+                    ),
+                    data=data,
+                    device=thermostat,
+                    attribute=lambda d: d.air_quality_outdoor.aqi if d.air_quality_outdoor is not None else None,
+                ),
+                DaikinOneThermostatSensor(
+                    description=SensorEntityDescription(
+                        key="outdoor_air_quality_summary",
+                        name="Outdoor Air Quality",
+                        has_entity_name=True,
+                        device_class=SensorDeviceClass.ENUM,
+                        icon="mdi:air-filter",
+                    ),
+                    data=data,
+                    device=thermostat,
+                    attribute=lambda d: (
+                        d.air_quality_outdoor.aqi_summary_level.name.capitalize()
+                        if d.air_quality_outdoor is not None
+                        else None
+                    ),
+                ),
+                DaikinOneThermostatSensor(
+                    description=SensorEntityDescription(
+                        key="outdoor_air_quality_particles",
+                        name="Outdoor Air Quality Particles",
+                        has_entity_name=True,
+                        state_class=SensorStateClass.MEASUREMENT,
+                        # TODO: don't know what measurement this actually is, PM25 is a guess
+                        device_class=SensorDeviceClass.PM25,
+                        native_unit_of_measurement=CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
+                        icon="mdi:air-filter",
+                    ),
+                    data=data,
+                    device=thermostat,
+                    attribute=lambda d: (
+                        d.air_quality_outdoor.particles_microgram_m3 if d.air_quality_outdoor is not None else None
+                    ),
+                ),
+                DaikinOneThermostatSensor(
+                    description=SensorEntityDescription(
+                        key="outdoor_air_quality_ozone",
+                        name="Outdoor Air Quality Ozone",
+                        has_entity_name=True,
+                        state_class=SensorStateClass.MEASUREMENT,
+                        device_class=SensorDeviceClass.OZONE,
+                        native_unit_of_measurement=CONCENTRATION_PARTS_PER_BILLION,
+                        icon="mdi:air-filter",
+                    ),
+                    data=data,
+                    device=thermostat,
+                    attribute=lambda d: d.air_quality_outdoor.ozone_ppb if d.air_quality_outdoor is not None else None,
+                ),
+            ]
+
+        if thermostat.air_quality_indoor is not None:
+            entities += [
+                DaikinOneThermostatSensor(
+                    description=SensorEntityDescription(
+                        key="indoor_air_quality_index",
+                        name="Indoor Air Quality Index",
+                        has_entity_name=True,
+                        state_class=SensorStateClass.MEASUREMENT,
+                        device_class=SensorDeviceClass.AQI,
+                        icon="mdi:air-filter",
+                    ),
+                    data=data,
+                    device=thermostat,
+                    attribute=lambda d: d.air_quality_indoor.aqi if d.air_quality_indoor is not None else None,
+                ),
+                DaikinOneThermostatSensor(
+                    description=SensorEntityDescription(
+                        key="indoor_air_quality_summary",
+                        name="Indoor Air Quality",
+                        has_entity_name=True,
+                        device_class=SensorDeviceClass.ENUM,
+                        icon="mdi:air-filter",
+                    ),
+                    data=data,
+                    device=thermostat,
+                    attribute=lambda d: (
+                        d.air_quality_indoor.aqi_summary_level.name.capitalize()
+                        if d.air_quality_indoor is not None
+                        else None
+                    ),
+                ),
+                DaikinOneThermostatSensor(
+                    description=SensorEntityDescription(
+                        key="indoor_air_quality_particles",
+                        name="Indoor Air Quality Particle Count",
+                        has_entity_name=True,
+                        state_class=SensorStateClass.MEASUREMENT,
+                        # TODO: don't know what measurement this actually is, PM25 is a guess
+                        device_class=SensorDeviceClass.PM25,
+                        native_unit_of_measurement=CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
+                        icon="mdi:air-filter",
+                    ),
+                    data=data,
+                    device=thermostat,
+                    attribute=lambda d: d.air_quality_indoor.particles if d.air_quality_indoor is not None else None,
+                ),
+                DaikinOneThermostatSensor(
+                    description=SensorEntityDescription(
+                        key="indoor_air_quality_particles_summary",
+                        name="Indoor Air Quality Particles",
+                        has_entity_name=True,
+                        device_class=SensorDeviceClass.ENUM,
+                        icon="mdi:air-filter",
+                    ),
+                    data=data,
+                    device=thermostat,
+                    attribute=lambda d: (
+                        d.air_quality_indoor.particles_summary_level.name.capitalize()
+                        if d.air_quality_indoor is not None
+                        else None
+                    ),
+                ),
+                DaikinOneThermostatSensor(
+                    description=SensorEntityDescription(
+                        key="indoor_air_quality_voc",
+                        name="Indoor Air Quality VOC Count",
+                        has_entity_name=True,
+                        state_class=SensorStateClass.MEASUREMENT,
+                        device_class=SensorDeviceClass.VOLATILE_ORGANIC_COMPOUNDS,
+                        icon="mdi:air-filter",
+                    ),
+                    data=data,
+                    device=thermostat,
+                    attribute=lambda d: d.air_quality_indoor.voc if d.air_quality_indoor is not None else None,
+                ),
+                DaikinOneThermostatSensor(
+                    description=SensorEntityDescription(
+                        key="indoor_air_quality_voc_summary",
+                        name="Indoor Air Quality VOC",
+                        has_entity_name=True,
+                        device_class=SensorDeviceClass.ENUM,
+                        icon="mdi:air-filter",
+                    ),
+                    data=data,
+                    device=thermostat,
+                    attribute=lambda d: (
+                        d.air_quality_indoor.voc_summary_level.name.capitalize()
+                        if d.air_quality_indoor is not None
+                        else None
+                    ),
+                ),
+            ]
 
         # equipment sensors
         for equipment in thermostat.equipment.values():
