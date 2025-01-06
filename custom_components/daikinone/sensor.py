@@ -13,7 +13,6 @@ from homeassistant.const import (
     UnitOfPressure,
     UnitOfElectricCurrent,
     CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
-    CONCENTRATION_PARTS_PER_BILLION,
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -148,12 +147,14 @@ async def async_setup_entry(
                         has_entity_name=True,
                         state_class=SensorStateClass.MEASUREMENT,
                         device_class=SensorDeviceClass.OZONE,
-                        native_unit_of_measurement=CONCENTRATION_PARTS_PER_BILLION,
+                        native_unit_of_measurement=CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
                         icon="mdi:air-filter",
                     ),
                     data=data,
                     device=thermostat,
-                    attribute=lambda d: d.air_quality_outdoor.ozone_ppb if d.air_quality_outdoor is not None else None,
+                    attribute=lambda d: (
+                        d.air_quality_outdoor.ozone_microgram_m3 if d.air_quality_outdoor is not None else None
+                    ),
                 ),
             ]
 
