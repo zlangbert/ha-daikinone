@@ -1,0 +1,21 @@
+{
+	"entity": {
+		"climate": {
+			"daikinone_thermostat": {
+				"state_attributes": {
+					"preset_mode": {
+						"state": {
+							"emergency_heat": "mdi:fire-alert"
+						}
+					},
+					"fan_mode": {
+						"state": {
+							"always_on": "mdi:fan",
+							"schedule": "mdi:fan-clock"
+						}
+					}
+				}
+			}
+		}
+	}
+}

@@ -170,6 +170,18 @@ class DaikinThermostatSchedule:
     enabled: bool
 
 
+class DaikinThermostatFanMode(Enum):
+    OFF = 0
+    ALWAYS_ON = 1
+    SCHEDULED = 2
+
+
+class DaikinThermostatFanSpeed(Enum):
+    LOW = 0
+    MEDIUM = 1
+    HIGH = 2
+
+
 @dataclass
 class DaikinThermostat(DaikinDevice):
     location_id: str
@@ -177,6 +189,8 @@ class DaikinThermostat(DaikinDevice):
     capabilities: set[DaikinThermostatCapability]
     mode: DaikinThermostatMode
     status: DaikinThermostatStatus
+    fan_mode: DaikinThermostatFanMode
+    fan_speed: DaikinThermostatFanSpeed
     schedule: DaikinThermostatSchedule
     indoor_temperature: Temperature
     indoor_humidity: int
@@ -268,6 +282,22 @@ class DaikinOne:
             body=payload,
         )
 
+    async def set_thermostat_fan_mode(self, thermostat_id: str, fan_mode: DaikinThermostatFanMode) -> None:
+        """Set thermostat fan mode"""
+        await self.__req(
+            url=f"{DAIKIN_API_URL_DEVICE_DATA}/{thermostat_id}",
+            method="PUT",
+            body={"fanCirculate": fan_mode.value},
+        )
+
+    async def set_thermostat_fan_speed(self, thermostat_id: str, fan_speed: DaikinThermostatFanSpeed) -> None:
+        """Set thermostat fan speed"""
+        await self.__req(
+            url=f"{DAIKIN_API_URL_DEVICE_DATA}/{thermostat_id}",
+            method="PUT",
+            body={"fanCirculateSpeed": fan_speed.value},
+        )
+
     async def __refresh_thermostats(self):
         devices = await self.__req(DAIKIN_API_URL_DEVICE_DATA)
         devices = [DaikinDeviceDataResponse(**device) for device in devices]
@@ -295,6 +325,8 @@ class DaikinOne:
             capabilities=capabilities,
             mode=DaikinThermostatMode(payload.data["mode"]),
             status=DaikinThermostatStatus(payload.data["equipmentStatus"]),
+            fan_mode=DaikinThermostatFanMode(payload.data["fanCirculate"]),
+            fan_speed=DaikinThermostatFanSpeed(payload.data["fanCirculateSpeed"]),
             schedule=DaikinThermostatSchedule(enabled=payload.data["schedEnabled"]),
             indoor_temperature=Temperature.from_celsius(payload.data["tempIndoor"]),
             indoor_humidity=payload.data["humIndoor"],

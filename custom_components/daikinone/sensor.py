@@ -16,12 +16,12 @@ from homeassistant.const import (
     CONCENTRATION_PARTS_PER_BILLION,
 )
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import StateType
 
 from custom_components.daikinone import DOMAIN, DaikinOneData
-from custom_components.daikinone.const import CONF_OPTION_ENTITY_UID_SCHEMA_VERSION_KEY, MANUFACTURER
+from custom_components.daikinone.const import CONF_OPTION_ENTITY_UID_SCHEMA_VERSION_KEY
+from custom_components.daikinone.entity import DaikinOneEntity
 from custom_components.daikinone.daikinone import (
     DaikinDevice,
     DaikinEEVCoil,
@@ -855,44 +855,15 @@ async def async_setup_entry(
     async_add_entities(entities, True)
 
 
-class DaikinOneSensor[D: DaikinDevice](SensorEntity):
+class DaikinOneSensor[D: DaikinDevice](DaikinOneEntity[D], SensorEntity):
     def __init__(
         self, description: SensorEntityDescription, data: DaikinOneData, device: D, attribute: Callable[[D], StateType]
     ) -> None:
         """Initialize the sensor."""
+        super().__init__(data, device)
 
         self.entity_description = description
-        self._data = data
-        self._device: D = device
         self._attribute = attribute
-
-        self._attr_device_info = self.get_device_info()
-
-    def get_device_info(self) -> DeviceInfo | None:
-        """Return device information for this sensor."""
-
-        info = DeviceInfo(
-            identifiers={(DOMAIN, self._device.id)},
-            name=self.device_name,
-            manufacturer=MANUFACTURER,
-            model=self._device.model,
-            sw_version=self._device.firmware_version,
-        )
-
-        if self.device_parent is not None:
-            info["via_device"] = (DOMAIN, self.device_parent)
-
-        return info
-
-    @property
-    def device_name(self) -> str:
-        """Return the name of the device."""
-        raise NotImplementedError("Sensor subclass did not implement device_name")
-
-    @property
-    def device_parent(self) -> str | None:
-        """Return the name of the device."""
-        return None
 
 
 class DaikinOneThermostatSensor(DaikinOneSensor[DaikinThermostat]):
@@ -913,14 +884,10 @@ class DaikinOneThermostatSensor(DaikinOneSensor[DaikinThermostat]):
             case _:
                 raise ValueError("unexpected entity uid schema version")
 
-    @property
-    def device_name(self) -> str:
-        return f"{self._device.name} Thermostat"
+    async def async_get_device(self) -> DaikinThermostat:
+        return self._data.daikin.get_thermostat(self._device.id)
 
-    async def async_update(self) -> None:
-        """Get the latest state of the sensor."""
-        await self._data.update()
-        self._device = self._data.daikin.get_thermostat(self._device.id)
+    def update_entity_attributes(self) -> None:
         self._attr_native_value = self._attribute(self._device)
 
 
@@ -938,15 +905,10 @@ class DaikinOneEquipmentSensor[E: DaikinEquipment](DaikinOneSensor[E]):
             case _:
                 raise ValueError("unexpected entity uid schema version")
 
-    @property
-    def device_name(self) -> str:
-        thermostat = self._data.daikin.get_thermostat(self._device.thermostat_id)
-        return f"{thermostat.name} {self._device.name}"
-
-    async def async_update(self) -> None:
-        """Get the latest state of the sensor."""
-        await self._data.update()
+    async def async_get_device(self) -> E:
         thermostat = self._data.daikin.get_thermostat(self._device.thermostat_id)
         # TODO: look at this type issue more later
-        self._device = thermostat.equipment[self._device.id]  # type: ignore[assignment]
+        return thermostat.equipment[self._device.id]  # type: ignore[return-value]
+
+    def update_entity_attributes(self) -> None:
         self._attr_native_value = self._attribute(self._device)
