@@ -1,36 +1,36 @@
 {
-	"config": {
-		"step": {
-			"user": {
-				"title": "Configure Daikin One",
-				"description": "Enter your Daikin One account credentials.",
-				"data": {
-					"email": "Email",
-					"password": "Password"
-				}
-			}
-		},
-		"error": {
-			"auth_failed": "Authentication failed, please check your credentials and try again. Check the logs for more info."
-		}
-	},
-	"entity": {
-		"climate": {
-			"daikinone_thermostat": {
-				"state_attributes": {
-					"preset_mode": {
-						"state": {
-							"emergency_heat": "Emergency heat"
-						}
-					},
-					"fan_mode": {
-						"state": {
-							"always_on": "Always on",
-							"schedule": "Scheduled"
-						}
-					}
-				}
-			}
-		}
-	}
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configure Daikin One",
+        "description": "Enter your Daikin One account credentials.",
+        "data": {
+          "email": "Email",
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "auth_failed": "Authentication failed, please check your credentials and try again. Check the logs for more info."
+    }
+  },
+  "entity": {
+    "climate": {
+      "daikinone_thermostat": {
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "emergency_heat": "Emergency heat"
+            }
+          },
+          "fan_mode": {
+            "state": {
+              "always_on": "Always on",
+              "schedule": "Scheduled"
+            }
+          }
+        }
+      }
+    }
+  }
 }
