@@ -121,7 +121,8 @@ class DaikinOneAirQualitySensorOutdoor:
     aqi: int
     aqi_summary_level: DaikinOneAirQualitySensorSummaryLevel
     particles_microgram_m3: int
-    ozone_ppb: int
+    # even though the app displays ppb, the levels seem to be µg/m³ based on my local weather data
+    ozone_microgram_m3: int
 
 
 @dataclass
@@ -200,6 +201,8 @@ class DaikinThermostat(DaikinDevice):
     set_point_cool: Temperature
     set_point_cool_min: Temperature
     set_point_cool_max: Temperature
+    outdoor_temperature: Temperature
+    outdoor_humidity: int
     air_quality_outdoor: DaikinOneAirQualitySensorOutdoor | None
     air_quality_indoor: DaikinOneAirQualitySensorIndoor | None
     equipment: dict[str, DaikinEquipment]
@@ -336,6 +339,8 @@ class DaikinOne:
             set_point_cool=Temperature.from_celsius(payload.data["cspActive"]),
             set_point_cool_min=Temperature.from_celsius(payload.data["EquipProtocolMinCoolSetpoint"]),
             set_point_cool_max=Temperature.from_celsius(payload.data["EquipProtocolMaxCoolSetpoint"]),
+            outdoor_temperature=Temperature.from_celsius(payload.data["tempOutdoor"]),
+            outdoor_humidity=payload.data["humOutdoor"],
             air_quality_outdoor=self.__map_air_quality_outdoor(payload),
             air_quality_indoor=self.__map_air_quality_indoor(payload),
             equipment=self.__map_equipment(payload),
@@ -351,7 +356,7 @@ class DaikinOne:
             aqi=payload.data["aqOutdoorValue"],
             aqi_summary_level=payload.data["aqOutdoorLevel"],
             particles_microgram_m3=payload.data["aqOutdoorParticles"],
-            ozone_ppb=payload.data["aqOutdoorOzone"],
+            ozone_microgram_m3=payload.data["aqOutdoorOzone"],
         )
 
     def __map_air_quality_indoor(self, payload: DaikinDeviceDataResponse) -> DaikinOneAirQualitySensorIndoor | None:
