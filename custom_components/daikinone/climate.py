@@ -6,11 +6,15 @@ from homeassistant.components.climate import (
     ClimateEntityDescription,
 )
 from homeassistant.components.climate.const import (
-    HVACMode,
     ClimateEntityFeature,
+    HVACMode,
     HVACAction,
     ATTR_TARGET_TEMP_LOW,
     ATTR_TARGET_TEMP_HIGH,
+    FAN_ON,
+    FAN_LOW,
+    FAN_MEDIUM,
+    FAN_HIGH,
     FAN_OFF,
 )
 from homeassistant.config_entries import ConfigEntry
@@ -26,6 +30,7 @@ from custom_components.daikinone.daikinone import (
     DaikinThermostatMode,
     DaikinThermostatStatus,
     DaikinThermostatFanMode,
+    DaikinThermostatFanSpeed,
 )
 from custom_components.daikinone.utils import Temperature
 
@@ -61,7 +66,9 @@ class DaikinOneThermostatFanMode(Enum):
     OFF = FAN_OFF
     ALWAYS_ON = "always_on"
     SCHEDULED = "schedule"
-
+    LOW = FAN_LOW
+    MEDIUM = FAN_MEDIUM
+    HIGH = FAN_HIGH
 
 class DaikinOneThermostatFanSpeed(Enum):
     LOW = 0
@@ -266,6 +273,7 @@ class DaikinOneThermostat(DaikinOneEntity[DaikinThermostat], ClimateEntity):
 
     async def async_set_fan_mode(self, fan_mode: str) -> None:
         target_fan_mode: DaikinThermostatFanMode
+
         match fan_mode:
             case DaikinOneThermostatFanMode.OFF.value:
                 target_fan_mode = DaikinThermostatFanMode.OFF
@@ -273,19 +281,59 @@ class DaikinOneThermostat(DaikinOneEntity[DaikinThermostat], ClimateEntity):
                 target_fan_mode = DaikinThermostatFanMode.ALWAYS_ON
             case DaikinOneThermostatFanMode.SCHEDULED.value:
                 target_fan_mode = DaikinThermostatFanMode.SCHEDULED
+            case DaikinOneThermostatFanMode.LOW.value:
+                target_fan_mode = DaikinOneThermostatFanMode.LOW
+            case DaikinOneThermostatFanMode.MEDIUM.value:
+                target_fan_mode = DaikinOneThermostatFanMode.MEDIUM
+            case DaikinOneThermostatFanMode.HIGH.value:
+                target_fan_mode = DaikinOneThermostatFanMode.HIGH
             case _:
                 raise ValueError(f"Attempted to set unsupported fan mode: {fan_mode}")
 
-        # update fan mode optimistically
-        def update(t: DaikinThermostat):
-            t.fan_mode = target_fan_mode
+        if fan_mode in { DaikinOneThermostatFanMode.OFF.value, DaikinOneThermostatFanMode.ALWAYS_ON.value, DaikinOneThermostatFanMode.SCHEDULED.value } :
+            # update fan mode optimistically
+            def update(t: DaikinThermostat):
+                t.fan_mode = target_fan_mode
 
-        await self.update_state_optimistically(
-            operation=lambda: self._data.daikin.set_thermostat_fan_mode(self._device.id, target_fan_mode),
-            optimistic_update=update,
-            check=lambda t: t.fan_mode == target_fan_mode,
-        )
+            await self.update_state_optimistically(
+                operation=lambda: self._data.daikin.set_thermostat_fan_mode(self._device.id, target_fan_mode),
+                optimistic_update=update,
+                check=lambda t: t.fan_mode == target_fan_mode,
+            )
+        else:
+            # update fan mode to always_on before changing speed
+            
+            def update(t: DaikinThermostat):
+                t.fan_mode = DaikinThermostatFanMode.ALWAYS_ON
 
+            await self.update_state_optimistically(
+                operation=lambda: self._data.daikin.set_thermostat_fan_mode(self._device.id, DaikinThermostatFanMode.ALWAYS_ON),
+                optimistic_update=update,
+                check=lambda t: t.fan_mode == DaikinThermostatFanMode.ALWAYS_ON,
+            )
+            
+            target_fan_speed: DaikinThermostatFanSpeed
+            
+            match target_fan_mode:
+                case DaikinOneThermostatFanMode.LOW:
+                    target_fan_speed = DaikinThermostatFanSpeed.LOW
+                case DaikinOneThermostatFanMode.MEDIUM:
+                    target_fan_speed = DaikinThermostatFanSpeed.MEDIUM
+                case DaikinOneThermostatFanMode.HIGH:
+                    target_fan_speed = DaikinThermostatFanSpeed.HIGH
+                case _:
+                    raise ValueError(f"Attempted to set unsupported fan speed: {target_fan_mode}")     
+                           
+            # update fan speed optimistically
+            def update(t: DaikinThermostat):
+                t.fan_speed = target_fan_speed
+
+            await self.update_state_optimistically(
+                operation=lambda: self._data.daikin.set_thermostat_fan_speed(self._device.id, target_fan_speed),
+                optimistic_update=update,
+                check=lambda t: t.fan_speed == target_fan_speed,
+            )
+        
     async def async_get_device(self) -> DaikinThermostat:
         return self._data.daikin.get_thermostat(self._device.id)
 
