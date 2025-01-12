@@ -19,7 +19,16 @@ release version:
     @gh pr create --title "release: prepare {{version}}" --body "Prepare release {{version}}" --base main
 
     # Merging PR
-    @gh pr merge --auto --delete-branch
+    @gh pr merge --auto --squash --delete-branch
+
+    # Wait for GitHub to finish processing
+    @sleep 10
 
     # Creating release
     @gh release create v{{version}} --generate-notes
+
+    # Switching back to main branch
+    @git checkout main
+
+    # Deleting the local release prep branch
+    @git branch -D release-prep-{{version}}
