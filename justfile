@@ -2,8 +2,8 @@ release version:
     # Ensuring we are on main branch
     @git rev-parse --verify main > /dev/null 2>&1 || (echo "Not on main branch" && exit 1)
 
-    # Ensuring working directory is clean
-    @git status --porcelain | grep -q . && (echo "Working directory is not clean (has changes or untracked files)" && exit 1)
+    # Ensuring working directory is clean (including untracked files)
+    @test -z "$(git status --porcelain)" || (echo "Working directory is not clean (has changes or untracked files)" && exit 1)
 
     # Creating and checking out release preparation branch
     @git checkout -b release-prep-{{version}}
