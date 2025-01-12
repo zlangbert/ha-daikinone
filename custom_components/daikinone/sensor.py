@@ -195,7 +195,6 @@ async def async_setup_entry(
                         name="Indoor Air Quality Particle Count",
                         has_entity_name=True,
                         state_class=SensorStateClass.MEASUREMENT,
-                        # TODO: don't know what measurement this actually is, PM25 is a guess
                         device_class=SensorDeviceClass.PM25,
                         native_unit_of_measurement=CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
                         icon="mdi:air-filter",
@@ -227,6 +226,7 @@ async def async_setup_entry(
                         has_entity_name=True,
                         state_class=SensorStateClass.MEASUREMENT,
                         device_class=SensorDeviceClass.VOLATILE_ORGANIC_COMPOUNDS,
+                        native_unit_of_measurement=CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
                         icon="mdi:air-filter",
                     ),
                     data=data,
