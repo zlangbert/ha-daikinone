@@ -8,5 +8,5 @@
   "documentation": "https://github.com/zlangbert/ha-daikinone",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/zlangbert/ha-daikinone/issues",
-  "version": "0.9.3"
+  "version": "0.9.4"
 }
