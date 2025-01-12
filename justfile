@@ -18,11 +18,11 @@ release version:
     @git push -u origin release-prep-{{version}}
     @gh pr create --title "release: prepare {{version}}" --body "Prepare release {{version}}" --base main
 
-    # Merging PR
+    # Marking PR for merge
     @gh pr merge --auto --squash --delete-branch
 
-    # Wait for GitHub to finish processing
-    @sleep 10
+    # Waiting for GitHub to merge the PR
+    @while [ "$(gh pr view --json state -q .state)" != "MERGED" ]; do sleep 3; done
 
     # Creating release
     @gh release create v{{version}} --generate-notes
