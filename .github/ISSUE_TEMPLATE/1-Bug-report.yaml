@@ -1,0 +1,40 @@
+name: Bug Report
+description: Create a bug report if the integration is not loading, data is incorrect, etc.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report!
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: What version of the integration are you running?
+    validations:
+      required: true
+  - type: input
+    id: ha-version
+    attributes:
+      label: Home Assistant Version
+      description: What version of Home Assistant are you running?
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What is the issue?
+      description: Include any relevant details about your setup, particularly what HVAC equipment you have.
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics
+      description: From the three dots menu on the Daikin One integration entry in settings, click "Download diagnostics" and attach the file here.
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output
+      description: Please copy and paste any relevant Home Assistant log output. This will be automatically formatted into code, so no need for backticks.
+      render: shell

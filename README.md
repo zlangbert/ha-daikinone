@@ -4,36 +4,36 @@
 
 A custom component for Home Assistant to integrate with Daikin One+ smart HVAC systems. This integration allows you to control your thermostats and view all the telemetry reported by your equipment.
 
-<!-- TOC -->
-* [Daikin One for Home Assistant](#daikin-one-for-home-assistant)
-  * [Features](#features)
-  * [Todo](#todo)
-  * [Supported Equipment](#supported-equipment)
-    * [Thermostats](#thermostats)
-    * [Air Handlers](#air-handlers)
-    * [Heat Pumps](#heat-pumps)
-    * [Furnaces](#furnaces)
-  * [Installation](#installation)
-    * [Install via HACS](#install-via-hacs)
-    * [Manual Install](#manual-install)
-<!-- TOC -->
+- [Daikin One for Home Assistant](#daikin-one-for-home-assistant)
+  - [Features](#features)
+  - [Todo](#todo)
+  - [Supported Equipment](#supported-equipment)
+    - [Thermostats](#thermostats)
+    - [Air Handlers](#air-handlers)
+    - [Heat Pumps](#heat-pumps)
+    - [Air Conditioners](#air-conditioners)
+    - [Furnaces](#furnaces)
+  - [Installation](#installation)
+    - [Install via HACS](#install-via-hacs)
+    - [Manual Install](#manual-install)
 
 ## Features
 
-* Controllable climate entities for each thermostat
-* All HVAC modes supported by the Daikin One+ system, including Emergency Heat
-* Intelligent handling of thermostat updates for ultra-fast response times
-* Sensors for status, temperatures, airflow, demand, etc. for all connected equipment
-* Outdoor and indoor air quality sensors (if reported by your system)
+- Controllable climate entities for each thermostat
+- All HVAC modes supported by the Daikin One+ system, including Emergency Heat
+- Intelligent handling of thermostat updates for ultra-fast response times
+- Sensors for status, temperatures, airflow, demand, etc. for all connected equipment
+- Outdoor and indoor air quality sensors (if reported by your system)
 
+<!-- markdownlint-disable-next-line no-inline-html -->
 <img src="docs/dashboard.png" width="350" alt="dashboard example">
 
 Dashboard source can be found [here](docs/dashboard.yaml) if you'd like you use it as a starting point for your own dashboard.
 
 ## Todo
 
-* Weather entities for each thermostat
-* Support for additional equipment types
+- Weather entities for each thermostat
+- Support for additional equipment types
 
 ## Supported Equipment
 
@@ -43,26 +43,26 @@ If you have a Daikin One+ system and your equipment is not listed here, please o
 
 ### Thermostats
 
-* One Touch Smart Thermostat
+- One Touch Smart Thermostat
 
 ### Air Handlers
 
-* [MBVC Modular Blower](https://daikincomfort.com/products/heating-cooling/whole-house/air-handlers-coils/mbvc-modular)
+- [MBVC Modular Blower](https://daikincomfort.com/products/heating-cooling/whole-house/air-handlers-coils/mbvc-modular)
 
 ### Heat Pumps
 
-* [DZ9VC](https://daikincomfort.com/products/heating-cooling/whole-house/heat-pump/dz9vc)
-* [DZ6VS](https://daikincomfort.com/products/heating-cooling/whole-house/heat-pump/daikin-fit-heat-pump-dz6vs)
-* [DZ17VSA](https://daikincomfort.com/products/heating-cooling/whole-house/heat-pump/daikin-fit-heat-pump)
+- [DZ9VC](https://daikincomfort.com/products/heating-cooling/whole-house/heat-pump/dz9vc)
+- [DZ6VS](https://daikincomfort.com/products/heating-cooling/whole-house/heat-pump/daikin-fit-heat-pump-dz6vs)
+- [DZ17VSA](https://daikincomfort.com/products/heating-cooling/whole-house/heat-pump/daikin-fit-heat-pump)
 
 ### Air Conditioners
 
-* [DX6VS](https://daikincomfort.com/products/heating-cooling/whole-house/air-conditioner/daikin-fit-dx6vs)
+- [DX6VS](https://daikincomfort.com/products/heating-cooling/whole-house/air-conditioner/daikin-fit-dx6vs)
 
 ### Furnaces
 
-* [DM97MC](https://daikincomfort.com/products/heating-cooling/whole-house/gas-furnaces/dm97mc)
-* [DM80VC](https://daikincomfort.com/products/heating-cooling/whole-house/gas-furnaces/dm80vc)
+- [DM97MC](https://daikincomfort.com/products/heating-cooling/whole-house/gas-furnaces/dm97mc)
+- [DM80VC](https://daikincomfort.com/products/heating-cooling/whole-house/gas-furnaces/dm80vc)
 
 ## Installation
 
