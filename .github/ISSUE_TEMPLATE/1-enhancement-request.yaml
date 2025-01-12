@@ -1,0 +1,31 @@
+name: Enhancement Request
+description: Create an enhancement request for unsupported equipment or new integration features.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this enhancement request!
+  - type: dropdown
+    id: enhancement-type
+    attributes:
+      label: Enhancement Type
+      description: What type of enhancement are you requesting?
+      options:
+        - New Equipment Support
+        - New Integration Feature
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: request
+    attributes:
+      label: What would you like to see?
+      description: For new features, please describe the requested feature as comprehensively as possible. For new equipment, specify the the type and model numbers of your equipment, including thermostats, air handlers, heat pumps, etc.
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics
+      description: 'If you have the integration installed: from the three dots menu on the Daikin One integration entry in settings, click "Download diagnostics" and attach the file here.'
