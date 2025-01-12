@@ -365,9 +365,9 @@ class DaikinOne:
         return DaikinOneAirQualitySensorIndoor(
             aqi=payload.data["aqIndoorValue"],
             aqi_summary_level=payload.data["aqIndoorLevel"],
-            particles=payload.data["aqIndoorParticles"],
+            particles=payload.data["aqIndoorParticlesValue"],
             particles_summary_level=payload.data["aqIndoorParticlesLevel"],
-            voc=payload.data["aqIndoorVOC"],
+            voc=payload.data["aqIndoorVOCValue"],
             voc_summary_level=payload.data["aqIndoorVOCLevel"],
         )
 
