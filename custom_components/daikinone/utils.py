@@ -14,26 +14,23 @@ class Temperature(BaseModel):
         print(temp.fahrenheit)  # Prints the temperature in Fahrenheit
     """
 
+    _temp_c: float
+
+    def __init__(self, temp_c: float) -> None:
+        super().__init__()
+        self._temp_c = round(temp_c, 1)
+
     @staticmethod
     def from_celsius(temp_c: float) -> "Temperature":
-        temp = Temperature()
-        temp._init(temp_c)
-        return temp
+        return Temperature(temp_c)
 
     @staticmethod
     def from_fahrenheit(temp_f: float) -> "Temperature":
-        temp = Temperature()
-        temp._init((temp_f - 32) * 5 / 9)
-        return temp
+        return Temperature((temp_f - 32) * 5 / 9)
 
     @staticmethod
     def from_kelvin(temp_k: float) -> "Temperature":
-        temp = Temperature()
-        temp._init(temp_k - 273.15)
-        return temp
-
-    def _init(self, temp_c: float) -> None:
-        self._temp_c: float = round(temp_c, 1)
+        return Temperature(temp_k - 273.15)
 
     @property
     def celsius(self) -> float:
