@@ -13,6 +13,7 @@ A custom component for Home Assistant to integrate with Daikin One+ smart HVAC s
     - [Heat Pumps](#heat-pumps)
     - [Air Conditioners](#air-conditioners)
     - [Furnaces](#furnaces)
+    - [Mini Multi-Split Indoor Units](#mini-multi-split-indoor-units)
   - [Installation](#installation)
     - [Install via HACS](#install-via-hacs)
     - [Manual Install](#manual-install)
@@ -63,6 +64,11 @@ If you have a Daikin One+ system and your equipment is not listed here, please o
 
 - [DM97MC](https://daikincomfort.com/products/heating-cooling/whole-house/gas-furnaces/dm97mc)
 - [DM80VC](https://daikincomfort.com/products/heating-cooling/whole-house/gas-furnaces/dm80vc)
+
+### Mini Multi-Split Indoor Units
+
+- [FDMQ12WVJU9](https://www.daikinmea.com/en_us/product-group/dmea-concealed-ceiling/dame-fdmqn-series.html)
+- [FDMQ24WVJU9](https://www.daikinmea.com/en_us/product-group/dmea-concealed-ceiling/dame-fdmqn-series.html)
 
 ## Installation
 

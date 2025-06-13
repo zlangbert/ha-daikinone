@@ -10,6 +10,7 @@ import aiohttp
 from aiohttp import ClientError
 from pydantic import BaseModel
 from pydantic.dataclasses import dataclass
+from pprint import pprint
 
 from .exceptions import DaikinServiceException
 from custom_components.daikinone.utils import Temperature
@@ -182,6 +183,42 @@ class DaikinThermostatFanSpeed(Enum):
     MEDIUM = 1
     HIGH = 2
 
+class DaikinP1P2FanSpeed(Enum):
+    AUTO = 0
+    LOW = 1
+    MEDIUM = 3
+    HIGH = 5
+
+@dataclass
+class DaikinSplitUnit(DaikinEquipment):
+    # Basic unit info
+    mode: str
+    indoor_temperature: Temperature
+    indoor_humidity: float
+    set_point_heat: Temperature
+    set_point_cool: Temperature
+
+    # Airflow settings
+    fan_speed_percent: int
+    flap_swing: int
+
+    # Coil temperatures
+    suction_temperature: Temperature
+    discharge_temperature: Temperature
+
+    # Usage statistics
+    operating_time: int        # Operating time in minutes (per P1/P2)
+    equipment_status: DaikinThermostatStatus      # Equipment status code
+
+    # Additional P1/P2 fields
+    energized_time: int        # Cumulative energized time in minutes
+    fan_operation_time: int    # Cumulative fan operation time in minutes
+    eev_open_pulses: int       # EEV open pulses count
+    gas_pipe_temp: Temperature          # Heat exchanger gas pipe temperature
+    heat_exchanger_temp: Temperature    # Heat exchanger body temperature
+    fan_tap_active: bool       # Fan tap (swing) on/off status
+    humidifier_on: bool        # Auxiliary humidifier status
+    dehumidifier_on: bool      # Auxiliary dehumidifier status
 
 @dataclass
 class DaikinThermostat(DaikinDevice):
@@ -196,8 +233,8 @@ class DaikinThermostat(DaikinDevice):
     indoor_temperature: Temperature
     indoor_humidity: int
     set_point_heat: Temperature
-    set_point_heat_min: Temperature
     set_point_heat_max: Temperature
+    set_point_heat_min: Temperature
     set_point_cool: Temperature
     set_point_cool_min: Temperature
     set_point_cool_max: Temperature
@@ -300,6 +337,22 @@ class DaikinOne:
             body={"fanCirculateSpeed": fan_speed.value},
         )
 
+    async def set_p1p2_s21_num_fan_speeds_cooling(self, thermostat_id: str, value: int) -> None:
+        """Set P1/P2 S21 number of fan speeds for cooling (mini-multi-split)"""
+        await self.__req(
+            url=f"{DAIKIN_API_URL_DEVICE_DATA}/{thermostat_id}",
+            method="PUT",
+            body={"P1P2S21NumFanSpeedsCooling": value},
+        )
+
+    async def set_p1p2_s21_num_fan_speeds_heating(self, thermostat_id: str, value: int) -> None:
+        """Set P1/P2 S21 number of fan speeds for heating (mini-multi-split)"""
+        await self.__req(
+            url=f"{DAIKIN_API_URL_DEVICE_DATA}/{thermostat_id}",
+            method="PUT",
+            body={"P1P2S21NumFanSpeedsHeating": value},
+        )
+
     async def __refresh_thermostats(self):
         devices = await self.__req(DAIKIN_API_URL_DEVICE_DATA)
         devices = [DaikinDeviceDataResponse(**device) for device in devices]
@@ -309,6 +362,7 @@ class DaikinOne:
         log.info(f"Cached {len(self.__thermostats)} thermostats")
 
     def __map_thermostat(self, payload: DaikinDeviceDataResponse) -> DaikinThermostat:
+        pprint(payload.dict())
         capabilities = set(DaikinThermostatCapability)
         if payload.data["ctSystemCapHeat"]:
             capabilities.add(DaikinThermostatCapability.HEAT)
@@ -375,7 +429,7 @@ class DaikinOne:
         equipment: dict[str, DaikinEquipment] = {}
 
         # air handler
-        if payload.data["ctAHUnitType"] < 255:
+        if "ctAHUnitType" in payload.data and payload.data["ctAHUnitType"] < 255:
             model = payload.data["ctAHModelNoCharacter1_15"].strip()
             serial = payload.data["ctAHSerialNoCharacter1_15"].strip()
             eid = f"{model}-{serial}"
@@ -402,7 +456,7 @@ class DaikinOne:
             )
 
         # furnace
-        if payload.data["ctIFCUnitType"] < 255:
+        if "ctIFCUnitType" in payload.data and payload.data["ctIFCUnitType"] < 255:
             model = payload.data["ctIFCModelNoCharacter1_15"].strip()
             serial = payload.data["ctIFCSerialNoCharacter1_15"].strip()
             eid = f"{model}-{serial}"
@@ -429,7 +483,7 @@ class DaikinOne:
             )
 
         # outdoor unit
-        if payload.data["ctOutdoorUnitType"] < 255:
+        if "ctOutdoorUnitType" in payload.data and payload.data["ctOutdoorUnitType"] < 255:
             model = payload.data["ctOutdoorModelNoCharacter1_15"].strip()
             serial = payload.data["ctOutdoorSerialNoCharacter1_15"].strip()
             eid = f"{model}-{serial}"
@@ -479,7 +533,7 @@ class DaikinOne:
             )
 
         # eev coil
-        if payload.data["ctCoilUnitType"] < 255:
+        if "ctCoilUnitType" in payload.data and payload.data["ctCoilUnitType"] < 255:
             model = "EEV Coil"
             serial = payload.data["ctCoilSerialNoCharacter1_15"].strip()
             eid = f"eevcoil-{serial}"
@@ -496,6 +550,58 @@ class DaikinOne:
                 indoor_superheat_temperature=Temperature.from_fahrenheit(payload.data["ctEEVCoilSuperHeatValue"] / 10),
                 liquid_temperature=Temperature.from_fahrenheit(payload.data["ctEEVCoilSubCoolValue"] / 10),
                 suction_temperature=Temperature.from_fahrenheit(payload.data["ctEEVCoilSuctionTemperature"] / 10),
+            )
+
+        # Map Split / Multi-Split indoor unit via P1/P2 protocol
+        if payload.data.get("P1P2UnitType", 255) < 255:
+            model   = payload.data["P1P2IndoorUnitModelNameManual"].strip()
+            serial  = payload.data["P1P2IndoorUnitSerialNumber"].strip()
+            eid     = f"{model}-{serial}"
+            name    = "Split/Multi-Split Indoor Unit"
+
+            d = payload.data
+            equipment[eid] = DaikinSplitUnit(
+                id                 = eid,
+                thermostat_id      = payload.id,
+                name               = name,
+                model              = model,
+                firmware_version   = payload.firmware.strip(),
+                serial             = serial,
+
+                # Operating mode and status
+                mode              = {0: "Off",1:"Heat",2:"Cool"}.get(d["mode"], "Unknown"),
+                equipment_status  = DaikinThermostatStatus(d["P1P2S21equipmentStatus"]),
+
+                # Indoor temperature & humidity
+                indoor_temperature = Temperature.from_celsius(d["tempIndoor"]),
+                indoor_humidity    = d["humIndoor"],
+
+                # Active setpoints
+                set_point_heat     = Temperature.from_celsius(
+                        d["hspActive"] if (raw := d.get("P1P2hspFromEquipment", d["hspActive"])) == 65535 else raw
+                    ),
+                set_point_cool     = Temperature.from_celsius(
+                        d["cspActive"] if (raw := d.get("P1P2cspFromEquipment", d["cspActive"])) == 65535 else raw
+                    ),
+
+                # Fan controls
+                fan_speed_percent  = d["P1P2IndoorUnitFanSpeed"],    # Percent 0–100
+                flap_swing         = d["P1P2IndoorUnitFlapSwing"],   # Swing position 0–100
+
+                # Coil sensor readings
+                suction_temperature  = Temperature.from_celsius(d["P1P2IndoorSuctionAirThermistor"]),
+                discharge_temperature = Temperature.from_celsius(d["P1P2IndoorUnitDischargeAirThermistor"]),
+
+                # Cumulative operating time
+                operating_time     = d["P1P2IndoorUnitOperatingTime"],
+                energized_time         = d["P1P2IndoorUnitEnergizedTime"],
+                fan_operation_time     = d["P1P2IndoorUnitFanOperationTime"],
+                eev_open_pulses        = d["P1P2IndoorUnitEEVOpenPulses"],
+                gas_pipe_temp          = Temperature.from_celsius(d["P1P2IndoorUnitHeatExchangerGasPipeThermistor"]),
+                heat_exchanger_temp    = Temperature.from_celsius(d["P1P2IndoorUnitHeatExchangerThermistor"]),
+                fan_tap_active         = bool(d["P1P2IndoorUnitFanTap"]),
+                humidifier_on          = bool(d["AuxHumidifierStatus"]),
+                dehumidifier_on        = bool(d["AuxDehumidifierStatus"]),
             )
 
         return equipment

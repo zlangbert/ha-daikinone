@@ -57,6 +57,47 @@ class DaikinOneFanSpeedSelect(DaikinOneEntity[DaikinThermostat], SelectEntity):
 
     async def async_select_option(self, option: str) -> None:
         """Change the selected option."""
+        name = self._device.name.lower()
+        # special case for P1/P2 mini‐multi‐split units
+        if "Split/Multi-Split Indoor Unit" in name:
+            match option.upper():
+                case DaikinOneThermostatFanSpeed.LOW.name:
+                    target_value = DaikinP1P2FanSpeed.LOW
+                case DaikinOneThermostatFanSpeed.MEDIUM.name:
+                    target_value = DaikinP1P2FanSpeed.MEDIUM
+                case DaikinOneThermostatFanSpeed.HIGH.name:
+                    target_value = DaikinP1P2FanSpeed.HIGH
+                case _:
+                    raise ValueError(
+                        f"Attempted to set unsupported fan speed: {option}")
+
+            # choose the correct API field based on current mode
+            mode = self._device.mode.lower()
+            if mode == "cool":
+                operation = lambda: self._data.daikin.set_p1p2_s21_num_fan_speeds_cooling(
+                    self._device.id, target_value
+                )
+                check = lambda t: t.cool_demand_requested_percent == target_value
+            elif mode == "heat":
+                operation = lambda: self._data.daikin.set_p1p2_s21_num_fan_speeds_heating(
+                    self._device.id, target_value
+                )
+                check = lambda t: t.heat_demand_requested_percent == target_value
+            else:
+                raise ValueError(f"Unsupported mode for mini multi split fan speed: {self._device.mode}")
+
+            # optimistic update of the in‐memory object
+            def update(t: DaikinThermostat):
+                t.fan_speed = target_value
+
+            await self.update_state_optimistically(
+                operation=operation,
+                optimistic_update=update,
+                check=check,
+            )
+            return
+
+        # === fallback for standard P1/P2-less thermostats ===
         target_fan_speed: DaikinThermostatFanSpeed
         match option.upper():
             case DaikinOneThermostatFanSpeed.LOW.name:
@@ -68,15 +109,17 @@ class DaikinOneFanSpeedSelect(DaikinOneEntity[DaikinThermostat], SelectEntity):
             case _:
                 raise ValueError(f"Attempted to set unsupported fan speed: {option}")
 
-        # update fan speed optimistically
-        def update(t: DaikinThermostat):
+        def update_enum(t: DaikinThermostat):
             t.fan_speed = target_fan_speed
 
         await self.update_state_optimistically(
-            operation=lambda: self._data.daikin.set_thermostat_fan_speed(self._device.id, target_fan_speed),
-            optimistic_update=update,
+            operation=lambda: self._data.daikin.set_thermostat_fan_speed(
+                self._device.id, target_fan_speed
+            ),
+            optimistic_update=update_enum,
             check=lambda t: t.fan_speed == target_fan_speed,
         )
+
 
     async def async_get_device(self) -> DaikinThermostat:
         return self._data.daikin.get_thermostat(self._device.id)
