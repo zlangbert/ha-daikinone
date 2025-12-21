@@ -300,11 +300,46 @@ class DaikinOne:
             body={"fanCirculateSpeed": fan_speed.value},
         )
 
+    def __has_garbage_data(self, device: DaikinDeviceDataResponse) -> bool:
+        """Check if device data contains garbage sentinel values (255, 65535)"""
+        data = device.data
+
+        # Check power values for 65535 sentinel
+        if data.get("ctIndoorPower") == 65535 or data.get("ctOutdoorPower") == 65535:
+            return True
+
+        # Check demand values for 255 sentinel
+        demand_fields = [
+            "ctAHFanRequestedDemand",
+            "ctAHHeatRequestedDemand",
+            "ctIFCFanRequestedDemandPercent",
+            "ctOutdoorHeatRequestedDemand",
+            "ctOutdoorCoolRequestedDemand",
+        ]
+        for field in demand_fields:
+            if data.get(field) == 255:
+                return True
+
+        return False
+
     async def __refresh_thermostats(self):
         devices = await self.__req(DAIKIN_API_URL_DEVICE_DATA)
         devices = [DaikinDeviceDataResponse(**device) for device in devices]
 
-        self.__thermostats = {device.id: self.__map_thermostat(device) for device in devices}
+        # Filter out devices with garbage data
+        valid_devices = []
+        for device in devices:
+            if self.__has_garbage_data(device):
+                log.warning(
+                    f"Skipping update for device {device.id} ({device.name}) due to garbage data from API "
+                    f"(sentinel values detected). Preserving last known state."
+                )
+            else:
+                valid_devices.append(device)
+
+        # Only update thermostats with valid data
+        for device in valid_devices:
+            self.__thermostats[device.id] = self.__map_thermostat(device)
 
         log.info(f"Cached {len(self.__thermostats)} thermostats")
 
