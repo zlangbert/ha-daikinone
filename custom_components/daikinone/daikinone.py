@@ -322,12 +322,12 @@ class DaikinOne:
 
         return False
 
-    async def __refresh_thermostats(self):
+    async def __refresh_thermostats(self) -> None:
         devices = await self.__req(DAIKIN_API_URL_DEVICE_DATA)
         devices = [DaikinDeviceDataResponse(**device) for device in devices]
 
         # Filter out devices with garbage data
-        valid_devices = []
+        valid_devices: list[DaikinDeviceDataResponse] = []
         for device in devices:
             if self.__has_garbage_data(device):
                 log.warning(
