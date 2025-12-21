@@ -30,3 +30,5 @@ jobs:
       run: uv run ruff check .
     - name: Format Check
       run: uv run black --check custom_components
+    - name: Test
+      run: uv run pytest tests/ -v

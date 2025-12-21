@@ -13,6 +13,8 @@ dev-dependencies = [
     "ruff>=0.2.1",
     "pyright>=1.1.350",
     "black[d]>=24.1.1",
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
 ]
 
 [tool.pyright]
@@ -27,3 +29,7 @@ line-length = 120
 
 [tool.black]
 line-length = 120
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
