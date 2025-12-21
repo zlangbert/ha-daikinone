@@ -312,7 +312,6 @@ class DaikinOne:
         demand_fields = [
             "ctAHFanRequestedDemand",
             "ctAHHeatRequestedDemand",
-            "ctIFCFanRequestedDemandPercent",
             "ctOutdoorHeatRequestedDemand",
             "ctOutdoorCoolRequestedDemand",
         ]

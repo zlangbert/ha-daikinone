@@ -199,7 +199,6 @@ class TestGarbageDataDetection:
         demand_fields = [
             "ctAHFanRequestedDemand",
             "ctAHHeatRequestedDemand",
-            "ctIFCFanRequestedDemandPercent",
             "ctOutdoorHeatRequestedDemand",
             "ctOutdoorCoolRequestedDemand",
         ]
