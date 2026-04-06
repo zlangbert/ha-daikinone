@@ -74,7 +74,7 @@ async def async_setup_entry(
                 ),
                 data=data,
                 device=thermostat,
-                attribute=lambda d: d.indoor_temperature.celsius,
+                attribute=lambda d: d.indoor_temperature.celsius if d.indoor_temperature else None,
             ),
             DaikinOneThermostatSensor(
                 description=SensorEntityDescription(
@@ -430,7 +430,7 @@ async def async_setup_entry(
                             ),
                             data=data,
                             device=equipment,
-                            attribute=lambda e: e.total_runtime.total_seconds(),
+                            attribute=lambda e: e.total_runtime.total_seconds() if e.total_runtime else None,
                         ),
                         DaikinOneEquipmentSensor(
                             description=SensorEntityDescription(
@@ -599,7 +599,7 @@ async def async_setup_entry(
                             ),
                             data=data,
                             device=equipment,
-                            attribute=lambda e: e.air_temperature.celsius,
+                            attribute=lambda e: e.air_temperature.celsius if e.air_temperature else None,
                         ),
                         DaikinOneEquipmentSensor(
                             description=SensorEntityDescription(
@@ -613,7 +613,7 @@ async def async_setup_entry(
                             ),
                             data=data,
                             device=equipment,
-                            attribute=lambda e: e.coil_temperature.celsius,
+                            attribute=lambda e: e.coil_temperature.celsius if e.coil_temperature else None,
                         ),
                         DaikinOneEquipmentSensor(
                             description=SensorEntityDescription(
@@ -627,7 +627,7 @@ async def async_setup_entry(
                             ),
                             data=data,
                             device=equipment,
-                            attribute=lambda e: e.discharge_temperature.celsius,
+                            attribute=lambda e: e.discharge_temperature.celsius if e.discharge_temperature else None,
                         ),
                         DaikinOneEquipmentSensor(
                             description=SensorEntityDescription(
@@ -641,7 +641,7 @@ async def async_setup_entry(
                             ),
                             data=data,
                             device=equipment,
-                            attribute=lambda e: e.liquid_temperature.celsius,
+                            attribute=lambda e: e.liquid_temperature.celsius if e.liquid_temperature else None,
                         ),
                         DaikinOneEquipmentSensor(
                             description=SensorEntityDescription(
@@ -655,7 +655,7 @@ async def async_setup_entry(
                             ),
                             data=data,
                             device=equipment,
-                            attribute=lambda e: e.defrost_sensor_temperature.celsius,
+                            attribute=lambda e: e.defrost_sensor_temperature.celsius if e.defrost_sensor_temperature else None,
                         ),
                         DaikinOneEquipmentSensor(
                             description=SensorEntityDescription(
@@ -669,7 +669,7 @@ async def async_setup_entry(
                             ),
                             data=data,
                             device=equipment,
-                            attribute=lambda e: e.inverter_fin_temperature.celsius,
+                            attribute=lambda e: e.inverter_fin_temperature.celsius if e.inverter_fin_temperature else None,
                         ),
                         DaikinOneEquipmentSensor(
                             description=SensorEntityDescription(
@@ -804,7 +804,7 @@ async def async_setup_entry(
                             ),
                             data=data,
                             device=equipment,
-                            attribute=lambda e: e.indoor_superheat_temperature.celsius,
+                            attribute=lambda e: e.indoor_superheat_temperature.celsius if e.indoor_superheat_temperature else None,
                         ),
                         DaikinOneEquipmentSensor(
                             description=SensorEntityDescription(
@@ -818,7 +818,7 @@ async def async_setup_entry(
                             ),
                             data=data,
                             device=equipment,
-                            attribute=lambda e: e.liquid_temperature.celsius,
+                            attribute=lambda e: e.liquid_temperature.celsius if e.liquid_temperature else None,
                         ),
                         DaikinOneEquipmentSensor(
                             description=SensorEntityDescription(
@@ -832,7 +832,7 @@ async def async_setup_entry(
                             ),
                             data=data,
                             device=equipment,
-                            attribute=lambda e: e.suction_temperature.celsius,
+                            attribute=lambda e: e.suction_temperature.celsius if e.suction_temperature else None,
                         ),
                         DaikinOneEquipmentSensor(
                             description=SensorEntityDescription(

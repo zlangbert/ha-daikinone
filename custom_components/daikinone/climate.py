@@ -291,7 +291,7 @@ class DaikinOneThermostat(DaikinOneEntity[DaikinThermostat], ClimateEntity):
 
     def update_entity_attributes(self) -> None:
         self._attr_available = self._device.online
-        self._attr_current_temperature = self._device.indoor_temperature.celsius
+        self._attr_current_temperature = self._device.indoor_temperature.celsius if self._device.indoor_temperature else None
         self._attr_current_humidity = self._device.indoor_humidity
 
         # hvac current mode and preset
@@ -331,26 +331,27 @@ class DaikinOneThermostat(DaikinOneEntity[DaikinThermostat], ClimateEntity):
 
         match self._device.mode:
             case DaikinThermostatMode.HEAT | DaikinThermostatMode.AUX_HEAT:
-                self._attr_target_temperature = self._device.set_point_heat.celsius
+                self._attr_target_temperature = self._device.set_point_heat.celsius if self._device.set_point_heat else None
             case DaikinThermostatMode.COOL:
-                self._attr_target_temperature = self._device.set_point_cool.celsius
+                self._attr_target_temperature = self._device.set_point_cool.celsius if self._device.set_point_cool else None
             case DaikinThermostatMode.AUTO:
-                self._attr_target_temperature_low = self._device.set_point_heat.celsius
-                self._attr_target_temperature_high = self._device.set_point_cool.celsius
+                self._attr_target_temperature_low = self._device.set_point_heat.celsius if self._device.set_point_heat else None
+                self._attr_target_temperature_high = self._device.set_point_cool.celsius if self._device.set_point_cool else None
             case _:
                 pass
 
         # temperature bounds
+        heat_min = self._device.set_point_heat_min.celsius if self._device.set_point_heat_min else None
+        cool_min = self._device.set_point_cool_min.celsius if self._device.set_point_cool_min else None
+        heat_max = self._device.set_point_heat_max.celsius if self._device.set_point_heat_max else None
+        cool_max = self._device.set_point_cool_max.celsius if self._device.set_point_cool_max else None
+
         # these should be the same but just in case, take the larger of the two for the min
-        self._attr_min_temp = max(
-            self._device.set_point_heat_min.celsius,
-            self._device.set_point_cool_min.celsius,
-        )
+        if heat_min is not None and cool_min is not None:
+            self._attr_min_temp = max(heat_min, cool_min)
         # these should be the same but just in case, take the smaller of the two for the max
-        self._attr_max_temp = min(
-            self._device.set_point_heat_max.celsius,
-            self._device.set_point_cool_max.celsius,
-        )
+        if heat_max is not None and cool_max is not None:
+            self._attr_max_temp = min(heat_max, cool_max)
 
         # fan settings
         match self._device.fan_mode:
