@@ -7,6 +7,7 @@ services:
     volumes:
       - $PWD/.homeassistant/config:/config
       - $PWD/custom_components:/config/custom_components
+      - $PWD/dev/configuration.yaml:/config/configuration.yaml:ro
       - /etc/localtime:/etc/localtime:ro
     restart: unless-stopped
     develop:
@@ -14,4 +15,4 @@ services:
         - action: restart
           path: ./custom_components
         - action: restart
-          path: ./.homeassistant/config/configuration.yaml
+          path: ./dev/configuration.yaml
