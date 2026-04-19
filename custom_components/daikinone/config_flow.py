@@ -6,7 +6,8 @@ from homeassistant import config_entries
 from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
 
 from .const import DOMAIN, CONF_OPTION_ENTITY_UID_SCHEMA_VERSION_KEY
-from .daikinone import DaikinOne, DaikinUserCredentials
+from .client.client import DaikinOne
+from .client.models import DaikinUserCredentials
 
 log = logging.getLogger(__name__)
 

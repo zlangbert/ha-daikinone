@@ -12,7 +12,8 @@ from custom_components.daikinone.const import (
     DOMAIN,
     MIN_TIME_BETWEEN_UPDATES,
 )
-from custom_components.daikinone.daikinone import DaikinOne, DaikinUserCredentials
+from custom_components.daikinone.client.client import DaikinOne
+from custom_components.daikinone.client.models import DaikinUserCredentials
 
 log = logging.getLogger(__name__)
 

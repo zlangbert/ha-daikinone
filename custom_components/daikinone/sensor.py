@@ -21,7 +21,7 @@ from homeassistant.helpers.typing import StateType
 from custom_components.daikinone import DOMAIN, DaikinOneData
 from custom_components.daikinone.const import CONF_OPTION_ENTITY_UID_SCHEMA_VERSION_KEY
 from custom_components.daikinone.entity import DaikinOneEntity
-from custom_components.daikinone.daikinone import (
+from custom_components.daikinone.client.models import (
     DaikinDevice,
     DaikinEEVCoil,
     DaikinOutdoorUnitReversingValveStatus,
@@ -74,7 +74,7 @@ async def async_setup_entry(
                 ),
                 data=data,
                 device=thermostat,
-                attribute=lambda d: d.indoor_temperature.celsius,
+                attribute=lambda d: d.indoor_temperature.celsius if d.indoor_temperature else None,
             ),
             DaikinOneThermostatSensor(
                 description=SensorEntityDescription(
@@ -259,17 +259,6 @@ async def async_setup_entry(
                     entities += [
                         DaikinOneEquipmentSensor(
                             description=SensorEntityDescription(
-                                key="mode",
-                                name="Mode",
-                                has_entity_name=True,
-                                device_class=SensorDeviceClass.ENUM,
-                            ),
-                            data=data,
-                            device=equipment,
-                            attribute=lambda e: e.mode,
-                        ),
-                        DaikinOneEquipmentSensor(
-                            description=SensorEntityDescription(
                                 key="airflow",
                                 name="Airflow",
                                 has_entity_name=True,
@@ -363,6 +352,21 @@ async def async_setup_entry(
                     ]
 
                     # optional indoor unit sensors
+                    if equipment.mode is not None:
+                        entities.append(
+                            DaikinOneEquipmentSensor(
+                                description=SensorEntityDescription(
+                                    key="mode",
+                                    name="Mode",
+                                    has_entity_name=True,
+                                    device_class=SensorDeviceClass.ENUM,
+                                ),
+                                data=data,
+                                device=equipment,
+                                attribute=lambda e: e.mode,
+                            )
+                        )
+
                     if equipment.cool_demand_requested_percent is not None:
                         entities.append(
                             DaikinOneEquipmentSensor(
@@ -430,18 +434,7 @@ async def async_setup_entry(
                             ),
                             data=data,
                             device=equipment,
-                            attribute=lambda e: e.total_runtime.total_seconds(),
-                        ),
-                        DaikinOneEquipmentSensor(
-                            description=SensorEntityDescription(
-                                key="mode",
-                                name="Mode",
-                                has_entity_name=True,
-                                device_class=SensorDeviceClass.ENUM,
-                            ),
-                            data=data,
-                            device=equipment,
-                            attribute=lambda e: e.mode,
+                            attribute=lambda e: e.total_runtime.total_seconds() if e.total_runtime else None,
                         ),
                         DaikinOneEquipmentSensor(
                             description=SensorEntityDescription(
@@ -599,7 +592,7 @@ async def async_setup_entry(
                             ),
                             data=data,
                             device=equipment,
-                            attribute=lambda e: e.air_temperature.celsius,
+                            attribute=lambda e: e.air_temperature.celsius if e.air_temperature else None,
                         ),
                         DaikinOneEquipmentSensor(
                             description=SensorEntityDescription(
@@ -613,7 +606,7 @@ async def async_setup_entry(
                             ),
                             data=data,
                             device=equipment,
-                            attribute=lambda e: e.coil_temperature.celsius,
+                            attribute=lambda e: e.coil_temperature.celsius if e.coil_temperature else None,
                         ),
                         DaikinOneEquipmentSensor(
                             description=SensorEntityDescription(
@@ -627,7 +620,7 @@ async def async_setup_entry(
                             ),
                             data=data,
                             device=equipment,
-                            attribute=lambda e: e.discharge_temperature.celsius,
+                            attribute=lambda e: e.discharge_temperature.celsius if e.discharge_temperature else None,
                         ),
                         DaikinOneEquipmentSensor(
                             description=SensorEntityDescription(
@@ -641,7 +634,7 @@ async def async_setup_entry(
                             ),
                             data=data,
                             device=equipment,
-                            attribute=lambda e: e.liquid_temperature.celsius,
+                            attribute=lambda e: e.liquid_temperature.celsius if e.liquid_temperature else None,
                         ),
                         DaikinOneEquipmentSensor(
                             description=SensorEntityDescription(
@@ -655,7 +648,9 @@ async def async_setup_entry(
                             ),
                             data=data,
                             device=equipment,
-                            attribute=lambda e: e.defrost_sensor_temperature.celsius,
+                            attribute=lambda e: (
+                                e.defrost_sensor_temperature.celsius if e.defrost_sensor_temperature else None
+                            ),
                         ),
                         DaikinOneEquipmentSensor(
                             description=SensorEntityDescription(
@@ -669,7 +664,9 @@ async def async_setup_entry(
                             ),
                             data=data,
                             device=equipment,
-                            attribute=lambda e: e.inverter_fin_temperature.celsius,
+                            attribute=lambda e: (
+                                e.inverter_fin_temperature.celsius if e.inverter_fin_temperature else None
+                            ),
                         ),
                         DaikinOneEquipmentSensor(
                             description=SensorEntityDescription(
@@ -730,6 +727,21 @@ async def async_setup_entry(
                     ]
 
                     # optional outdoor unit sensors
+                    if equipment.mode is not None:
+                        entities.append(
+                            DaikinOneEquipmentSensor(
+                                description=SensorEntityDescription(
+                                    key="mode",
+                                    name="Mode",
+                                    has_entity_name=True,
+                                    device_class=SensorDeviceClass.ENUM,
+                                ),
+                                data=data,
+                                device=equipment,
+                                attribute=lambda e: e.mode,
+                            )
+                        )
+
                     if equipment.reversing_valve is not DaikinOutdoorUnitReversingValveStatus.UNKNOWN:
                         entities.append(
                             DaikinOneEquipmentSensor(
@@ -804,7 +816,9 @@ async def async_setup_entry(
                             ),
                             data=data,
                             device=equipment,
-                            attribute=lambda e: e.indoor_superheat_temperature.celsius,
+                            attribute=lambda e: (
+                                e.indoor_superheat_temperature.celsius if e.indoor_superheat_temperature else None
+                            ),
                         ),
                         DaikinOneEquipmentSensor(
                             description=SensorEntityDescription(
@@ -818,7 +832,7 @@ async def async_setup_entry(
                             ),
                             data=data,
                             device=equipment,
-                            attribute=lambda e: e.liquid_temperature.celsius,
+                            attribute=lambda e: e.liquid_temperature.celsius if e.liquid_temperature else None,
                         ),
                         DaikinOneEquipmentSensor(
                             description=SensorEntityDescription(
@@ -832,7 +846,7 @@ async def async_setup_entry(
                             ),
                             data=data,
                             device=equipment,
-                            attribute=lambda e: e.suction_temperature.celsius,
+                            attribute=lambda e: e.suction_temperature.celsius if e.suction_temperature else None,
                         ),
                         DaikinOneEquipmentSensor(
                             description=SensorEntityDescription(
