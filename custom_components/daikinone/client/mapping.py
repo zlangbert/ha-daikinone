@@ -1,6 +1,8 @@
 """Pure functions that turn a Daikin device-data payload into domain models."""
 
-from custom_components.daikinone import fields as f
+import logging
+
+from custom_components.daikinone.client import fields as f
 from custom_components.daikinone.client.models import (
     DaikinEEVCoil,
     DaikinEquipment,
@@ -18,8 +20,13 @@ from custom_components.daikinone.client.models import (
     DaikinThermostatSchedule,
     DaikinThermostatStatus,
 )
-from custom_components.daikinone.client.wire import DaikinDeviceDataResponse
-from custom_components.daikinone.fields import capitalize, equipment_id, read
+from custom_components.daikinone.client.wire import (
+    DaikinDeviceDataResponse,
+    capitalize,
+    read,
+)
+
+log = logging.getLogger(__name__)
 
 
 def map_thermostat(payload: DaikinDeviceDataResponse) -> DaikinThermostat:
@@ -106,7 +113,13 @@ def _map_air_handler(payload: DaikinDeviceDataResponse) -> DaikinIndoorUnit | No
 
     model = read(payload.data, f.F_AH_MODEL)
     serial = read(payload.data, f.F_AH_SERIAL)
-    eid = equipment_id(payload.id, "airhandler", f"{model}-{serial}" if model and serial else None)
+    if not model or not serial:
+        log.warning(
+            "Skipping air handler for thermostat %s: model or serial unavailable in this response",
+            payload.id,
+        )
+        return None
+    eid = f"{model}-{serial}"
 
     return DaikinIndoorUnit(
         id=eid,
@@ -135,7 +148,13 @@ def _map_furnace(payload: DaikinDeviceDataResponse) -> DaikinIndoorUnit | None:
 
     model = read(payload.data, f.F_IFC_MODEL)
     serial = read(payload.data, f.F_IFC_SERIAL)
-    eid = equipment_id(payload.id, "furnace", f"{model}-{serial}" if model and serial else None)
+    if not model or not serial:
+        log.warning(
+            "Skipping furnace for thermostat %s: model or serial unavailable in this response",
+            payload.id,
+        )
+        return None
+    eid = f"{model}-{serial}"
 
     return DaikinIndoorUnit(
         id=eid,
@@ -164,7 +183,13 @@ def _map_outdoor_unit(payload: DaikinDeviceDataResponse) -> DaikinOutdoorUnit | 
 
     model = read(payload.data, f.F_OD_MODEL)
     serial = read(payload.data, f.F_OD_SERIAL)
-    eid = equipment_id(payload.id, "outdoor", f"{model}-{serial}" if model and serial else None)
+    if not model or not serial:
+        log.warning(
+            "Skipping outdoor unit for thermostat %s: model or serial unavailable in this response",
+            payload.id,
+        )
+        return None
+    eid = f"{model}-{serial}"
 
     # assume it can cool, and if it can also heat it should be a heat pump
     name = "Condensing Unit"
@@ -214,7 +239,13 @@ def _map_eev_coil(payload: DaikinDeviceDataResponse) -> DaikinEEVCoil | None:
         return None
 
     serial = read(payload.data, f.F_EEV_SERIAL)
-    eid = equipment_id(payload.id, "eevcoil", f"eevcoil-{serial}" if serial else None)
+    if not serial:
+        log.warning(
+            "Skipping EEV coil for thermostat %s: serial unavailable in this response",
+            payload.id,
+        )
+        return None
+    eid = f"eevcoil-{serial}"
 
     return DaikinEEVCoil(
         id=eid,

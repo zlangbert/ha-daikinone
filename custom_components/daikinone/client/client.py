@@ -45,15 +45,13 @@ class DaikinOne:
         raw = await self._transport.request(DAIKIN_API_URL_DEVICE_DATA)
         responses = [DaikinDeviceDataResponse(**d) for d in raw]
 
-        skipped = 0
         for r in responses:
             if not r.online and len(r.data) == 0:
                 log.warning(f"Skipping offline device with no data: {r.name} ({r.id})")
-                skipped += 1
                 continue
             self.__thermostats[r.id] = map_thermostat(r)
 
-        log.info(f"Cached {len(self.__thermostats)} thermostats ({skipped} skipped offline)")
+        log.info(f"Cached {len(self.__thermostats)} thermostats")
 
     def get_thermostat(self, thermostat_id: str) -> DaikinThermostat:
         return copy.deepcopy(self.__thermostats[thermostat_id])

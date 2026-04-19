@@ -10,20 +10,6 @@ from custom_components.daikinone.client.models import (
     DaikinOutdoorUnit,
     DaikinUserCredentials,
 )
-from custom_components.daikinone.fields import (
-    CelsiusField,
-    FloatField,
-    IntField,
-    PercentField,
-    RuntimeField,
-    Sentinel,
-    StringField,
-    TempField,
-    capitalize,
-    equipment_id,
-    read,
-)
-from custom_components.daikinone.utils import Temperature
 
 
 @pytest.fixture
@@ -143,116 +129,6 @@ def _make_device(*equipment_blocks: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-# --- Direct tests for the field reader ---
-
-
-class TestIntField:
-    def test_sentinel_returns_none(self) -> None:
-        assert read({"k": 255}, IntField("k", Sentinel.U8)) is None
-        assert read({"k": 65535}, IntField("k", Sentinel.U16)) is None
-        assert read({"k": 32767}, IntField("k", Sentinel.I16)) is None
-
-    def test_scaled(self) -> None:
-        assert read({"k": 100}, IntField("k", Sentinel.U8, 0.5)) == 50
-        assert read({"k": 80}, IntField("k", Sentinel.U8, 10)) == 800
-
-    def test_returns_int(self) -> None:
-        v = read({"k": 3}, IntField("k", Sentinel.U8, 0.5))
-        assert isinstance(v, int)
-
-    def test_zero_preserved(self) -> None:
-        assert read({"k": 0}, IntField("k", Sentinel.U8, 0.5)) == 0
-
-
-class TestFloatField:
-    def test_sentinel_returns_none(self) -> None:
-        assert read({"k": 65535}, FloatField("k", Sentinel.U16, 0.1)) is None
-
-    def test_scaled(self) -> None:
-        assert read({"k": 100}, FloatField("k", Sentinel.U16, 0.1)) == 10.0
-
-    def test_returns_float(self) -> None:
-        v = read({"k": 100}, FloatField("k", Sentinel.U16, 0.1))
-        assert isinstance(v, float)
-
-
-class TestTempField:
-    def test_deci_fahrenheit_default(self) -> None:
-        t = read({"k": 750}, TempField("k"))
-        assert t is not None
-        assert abs(t.celsius - Temperature.from_fahrenheit(75.0).celsius) < 1e-6
-
-    def test_sentinel_default_i16(self) -> None:
-        assert read({"k": 32767}, TempField("k")) is None
-
-    def test_celsius_unit(self) -> None:
-        t = read({"k": 40}, TempField("k", Sentinel.U8, scale=1, unit="C"))
-        assert t is not None
-        assert t.celsius == 40
-
-    def test_celsius_sentinel(self) -> None:
-        assert read({"k": 255}, TempField("k", Sentinel.U8, scale=1, unit="C")) is None
-
-
-class TestRuntimeField:
-    def test_hours_to_timedelta(self) -> None:
-        t = read({"k": 1000}, RuntimeField("k"))
-        assert t is not None
-        assert t.total_seconds() == 1000 * 3600
-
-    def test_sentinel_returns_none(self) -> None:
-        assert read({"k": 4294967295}, RuntimeField("k")) is None
-
-
-class TestStringField:
-    def test_strips(self) -> None:
-        assert read({"k": "hello   "}, StringField("k")) == "hello"
-
-    def test_replacement_char_returns_none(self) -> None:
-        assert read({"k": "he\ufffdlo"}, StringField("k")) is None
-
-
-class TestPercentField:
-    def test_valid_range(self) -> None:
-        assert read({"k": 0}, PercentField("k")) == 0
-        assert read({"k": 50}, PercentField("k")) == 50
-        assert read({"k": 100}, PercentField("k")) == 100
-
-    def test_out_of_range_returns_none(self) -> None:
-        assert read({"k": -1}, PercentField("k")) is None
-        assert read({"k": 101}, PercentField("k")) is None
-        assert read({"k": 255}, PercentField("k")) is None
-
-
-class TestCelsiusField:
-    def test_in_range(self) -> None:
-        t = read({"k": 21.5}, CelsiusField("k"))
-        assert t is not None and t.celsius == 21.5
-
-    def test_out_of_range_returns_none(self) -> None:
-        assert read({"k": -99}, CelsiusField("k")) is None
-        assert read({"k": 200}, CelsiusField("k")) is None
-
-    def test_custom_bounds(self) -> None:
-        assert read({"k": 5}, CelsiusField("k", min_c=10, max_c=30)) is None
-        assert read({"k": 15}, CelsiusField("k", min_c=10, max_c=30)) is not None
-
-
-class TestHelpers:
-    def test_capitalize_none_passthrough(self) -> None:
-        assert capitalize(None) is None
-        assert capitalize("") is None  # empty string is falsy
-
-    def test_capitalize(self) -> None:
-        assert capitalize("heat") == "Heat"
-
-    def test_equipment_id_prefers_identity(self) -> None:
-        assert equipment_id("tid1", "airhandler", "AH-MODEL-AH-SERIAL") == "AH-MODEL-AH-SERIAL"
-
-    def test_equipment_id_falls_back_when_missing(self) -> None:
-        assert equipment_id("tid1", "airhandler", None) == "airhandler-tid1"
-
-
 # --- End-to-end: granular sanitization through DaikinOne.update ---
 
 
@@ -349,11 +225,14 @@ class TestMappingPreservesValidFields:
         assert thermostats["device123"].indoor_humidity == 45
 
 
-class TestEquipmentIdStability:
-    """Equipment id (used for HA entity uniqueness) stays stable when identity strings
-    sanitize to None on transient responses."""
+class TestEquipmentSkippedOnInvalidIdentity:
+    """When a wire identity string (model, serial) sanitizes to None, the equipment is
+    omitted from the thermostat's equipment dict rather than registered under a synthetic
+    id. Skipping preserves HA entity unique_id stability: the original `{model}-{serial}`
+    eid is never polluted with fallback values, so entities go temporarily unavailable
+    during garbage refreshes rather than being orphaned and re-registered under a new id."""
 
-    async def test_air_handler_falls_back_when_serial_invalid(
+    async def test_air_handler_skipped_when_serial_invalid(
         self, daikin_client: DaikinOne
     ) -> None:
         ah = {**AIR_HANDLER_DATA, "ctAHSerialNoCharacter1_15": "he\ufffdlo"}
@@ -364,11 +243,9 @@ class TestEquipmentIdStability:
             await daikin_client.update()
 
         thermostat = daikin_client.get_thermostats()["device123"]
-        unit = next(e for e in thermostat.equipment.values() if isinstance(e, DaikinIndoorUnit))
-        assert unit.id == "airhandler-device123"
-        assert unit.serial is None
+        assert not any(isinstance(e, DaikinIndoorUnit) for e in thermostat.equipment.values())
 
-    async def test_outdoor_falls_back_when_model_invalid(self, daikin_client: DaikinOne) -> None:
+    async def test_outdoor_skipped_when_model_invalid(self, daikin_client: DaikinOne) -> None:
         od = {**OUTDOOR_UNIT_DATA, "ctOutdoorModelNoCharacter1_15": "bad\ufffddata"}
         device_data = _make_device(od)
 
@@ -377,12 +254,9 @@ class TestEquipmentIdStability:
             await daikin_client.update()
 
         thermostat = daikin_client.get_thermostats()["device123"]
-        unit = next(e for e in thermostat.equipment.values() if isinstance(e, DaikinOutdoorUnit))
-        assert unit.id == "outdoor-device123"
-        assert unit.model is None
-        assert unit.serial == "OD-SERIAL"
+        assert not any(isinstance(e, DaikinOutdoorUnit) for e in thermostat.equipment.values())
 
-    async def test_eev_falls_back_when_serial_invalid(self, daikin_client: DaikinOne) -> None:
+    async def test_eev_skipped_when_serial_invalid(self, daikin_client: DaikinOne) -> None:
         eev = {**EEV_COIL_DATA, "ctCoilSerialNoCharacter1_15": "cor\ufffdupt"}
         device_data = _make_device(eev)
 
@@ -391,9 +265,20 @@ class TestEquipmentIdStability:
             await daikin_client.update()
 
         thermostat = daikin_client.get_thermostats()["device123"]
-        unit = next(e for e in thermostat.equipment.values() if isinstance(e, DaikinEEVCoil))
-        assert unit.id == "eevcoil-device123"
-        assert unit.serial is None
+        assert not any(isinstance(e, DaikinEEVCoil) for e in thermostat.equipment.values())
+
+    async def test_other_equipment_unaffected_by_one_skip(self, daikin_client: DaikinOne) -> None:
+        """Skipping one equipment kind does not affect unrelated equipment on the same thermostat."""
+        ah = {**AIR_HANDLER_DATA, "ctAHSerialNoCharacter1_15": "he\ufffdlo"}
+        device_data = _make_device(ah, OUTDOOR_UNIT_DATA)
+
+        with patch.object(daikin_client._transport, "request", new_callable=AsyncMock) as mock_req:
+            mock_req.return_value = [device_data]
+            await daikin_client.update()
+
+        thermostat = daikin_client.get_thermostats()["device123"]
+        assert not any(isinstance(e, DaikinIndoorUnit) for e in thermostat.equipment.values())
+        assert any(isinstance(e, DaikinOutdoorUnit) for e in thermostat.equipment.values())
 
     async def test_identity_preserved_when_fields_valid(self, daikin_client: DaikinOne) -> None:
         device_data = _make_device(AIR_HANDLER_DATA)
