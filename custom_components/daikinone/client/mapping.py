@@ -192,9 +192,8 @@ def _map_outdoor_unit(payload: DaikinDeviceDataResponse) -> DaikinOutdoorUnit | 
     eid = f"{model}-{serial}"
 
     # assume it can cool, and if it can also heat it should be a heat pump
-    name = "Condensing Unit"
-    if payload.data["ctOutdoorHeatMaxRPS"] != 0 and payload.data["ctOutdoorHeatMaxRPS"] != 65535:
-        name = "Heat Pump"
+    heat_max_rps = read(payload.data, f.F_OD_HEAT_MAX_RPS)
+    name = "Heat Pump" if heat_max_rps else "Condensing Unit"
 
     return DaikinOutdoorUnit(
         id=eid,

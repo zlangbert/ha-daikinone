@@ -48,11 +48,19 @@ class DaikinOutdoorUnitReversingValveStatus(Enum):
     ON = 1
     UNKNOWN = 255
 
+    @classmethod
+    def _missing_(cls, value: object) -> "DaikinOutdoorUnitReversingValveStatus":
+        return cls.UNKNOWN
+
 
 class DaikinOutdoorUnitHeaterStatus(Enum):
     OFF = 0
     ON = 1
     UNKNOWN = 255
+
+    @classmethod
+    def _missing_(cls, value: object) -> "DaikinOutdoorUnitHeaterStatus":
+        return cls.UNKNOWN
 
 
 @dataclass
@@ -140,6 +148,11 @@ class DaikinThermostatMode(Enum):
     COOL = 2
     AUTO = 3
     AUX_HEAT = 4
+    UNKNOWN = 255
+
+    @classmethod
+    def _missing_(cls, value: object) -> "DaikinThermostatMode":
+        return cls.UNKNOWN
 
 
 class DaikinThermostatStatus(Enum):
@@ -148,6 +161,11 @@ class DaikinThermostatStatus(Enum):
     HEATING = 3
     CIRCULATING_AIR = 4
     IDLE = 5
+    UNKNOWN = 255
+
+    @classmethod
+    def _missing_(cls, value: object) -> "DaikinThermostatStatus":
+        return cls.UNKNOWN
 
 
 @dataclass
@@ -159,12 +177,22 @@ class DaikinThermostatFanMode(Enum):
     OFF = 0
     ALWAYS_ON = 1
     SCHEDULED = 2
+    UNKNOWN = 255
+
+    @classmethod
+    def _missing_(cls, value: object) -> "DaikinThermostatFanMode":
+        return cls.UNKNOWN
 
 
 class DaikinThermostatFanSpeed(Enum):
     LOW = 0
     MEDIUM = 1
     HIGH = 2
+    UNKNOWN = 255
+
+    @classmethod
+    def _missing_(cls, value: object) -> "DaikinThermostatFanSpeed":
+        return cls.UNKNOWN
 
 
 @dataclass

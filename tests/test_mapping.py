@@ -8,6 +8,12 @@ from custom_components.daikinone.client.models import (
     DaikinEEVCoil,
     DaikinIndoorUnit,
     DaikinOutdoorUnit,
+    DaikinOutdoorUnitHeaterStatus,
+    DaikinOutdoorUnitReversingValveStatus,
+    DaikinThermostatFanMode,
+    DaikinThermostatFanSpeed,
+    DaikinThermostatMode,
+    DaikinThermostatStatus,
     DaikinUserCredentials,
 )
 
@@ -290,3 +296,142 @@ class TestEquipmentSkippedOnInvalidIdentity:
         thermostat = daikin_client.get_thermostats()["device123"]
         unit = next(e for e in thermostat.equipment.values() if isinstance(e, DaikinIndoorUnit))
         assert unit.id == "AH-MODEL-AH-SERIAL"
+
+
+class TestOutdoorUnitName:
+    async def test_heat_pump_when_max_rps_positive(self, daikin_client: DaikinOne) -> None:
+        device_data = _make_device({**OUTDOOR_UNIT_DATA, "ctOutdoorHeatMaxRPS": 100})
+
+        with patch.object(daikin_client._transport, "request", new_callable=AsyncMock) as mock_req:
+            mock_req.return_value = [device_data]
+            await daikin_client.update()
+
+        unit = next(
+            e
+            for e in daikin_client.get_thermostats()["device123"].equipment.values()
+            if isinstance(e, DaikinOutdoorUnit)
+        )
+        assert unit.name == "Heat Pump"
+
+    async def test_condensing_unit_when_max_rps_zero(self, daikin_client: DaikinOne) -> None:
+        device_data = _make_device({**OUTDOOR_UNIT_DATA, "ctOutdoorHeatMaxRPS": 0})
+
+        with patch.object(daikin_client._transport, "request", new_callable=AsyncMock) as mock_req:
+            mock_req.return_value = [device_data]
+            await daikin_client.update()
+
+        unit = next(
+            e
+            for e in daikin_client.get_thermostats()["device123"].equipment.values()
+            if isinstance(e, DaikinOutdoorUnit)
+        )
+        assert unit.name == "Condensing Unit"
+
+    async def test_condensing_unit_when_max_rps_sentinel(self, daikin_client: DaikinOne) -> None:
+        # 65535 is the U16 sentinel returned during a thermostat reboot; previously this
+        # was checked inline in mapping, now it flows through read()
+        device_data = _make_device({**OUTDOOR_UNIT_DATA, "ctOutdoorHeatMaxRPS": 65535})
+
+        with patch.object(daikin_client._transport, "request", new_callable=AsyncMock) as mock_req:
+            mock_req.return_value = [device_data]
+            await daikin_client.update()
+
+        unit = next(
+            e
+            for e in daikin_client.get_thermostats()["device123"].equipment.values()
+            if isinstance(e, DaikinOutdoorUnit)
+        )
+        assert unit.name == "Condensing Unit"
+
+
+class TestEnumSanitization:
+    """Enum-wrapped raw values would previously raise ValueError during reboot, crashing
+    the refresh. _missing_ now coerces unknown values to UNKNOWN so the mapping completes."""
+
+    async def test_thermostat_mode_sentinel_becomes_unknown(self, daikin_client: DaikinOne) -> None:
+        device_data = _make_device()
+        device_data["data"]["mode"] = 255
+
+        with patch.object(daikin_client._transport, "request", new_callable=AsyncMock) as mock_req:
+            mock_req.return_value = [device_data]
+            await daikin_client.update()
+
+        assert daikin_client.get_thermostats()["device123"].mode is DaikinThermostatMode.UNKNOWN
+
+    async def test_thermostat_status_sentinel_becomes_unknown(self, daikin_client: DaikinOne) -> None:
+        device_data = _make_device()
+        device_data["data"]["equipmentStatus"] = 255
+
+        with patch.object(daikin_client._transport, "request", new_callable=AsyncMock) as mock_req:
+            mock_req.return_value = [device_data]
+            await daikin_client.update()
+
+        assert daikin_client.get_thermostats()["device123"].status is DaikinThermostatStatus.UNKNOWN
+
+    async def test_thermostat_fan_mode_sentinel_becomes_unknown(self, daikin_client: DaikinOne) -> None:
+        device_data = _make_device()
+        device_data["data"]["fanCirculate"] = 255
+
+        with patch.object(daikin_client._transport, "request", new_callable=AsyncMock) as mock_req:
+            mock_req.return_value = [device_data]
+            await daikin_client.update()
+
+        assert (
+            daikin_client.get_thermostats()["device123"].fan_mode is DaikinThermostatFanMode.UNKNOWN
+        )
+
+    async def test_thermostat_fan_speed_sentinel_becomes_unknown(self, daikin_client: DaikinOne) -> None:
+        device_data = _make_device()
+        device_data["data"]["fanCirculateSpeed"] = 255
+
+        with patch.object(daikin_client._transport, "request", new_callable=AsyncMock) as mock_req:
+            mock_req.return_value = [device_data]
+            await daikin_client.update()
+
+        assert (
+            daikin_client.get_thermostats()["device123"].fan_speed is DaikinThermostatFanSpeed.UNKNOWN
+        )
+
+    async def test_thermostat_enum_unexpected_value_becomes_unknown(
+        self, daikin_client: DaikinOne
+    ) -> None:
+        device_data = _make_device()
+        device_data["data"]["mode"] = 99
+
+        with patch.object(daikin_client._transport, "request", new_callable=AsyncMock) as mock_req:
+            mock_req.return_value = [device_data]
+            await daikin_client.update()
+
+        assert daikin_client.get_thermostats()["device123"].mode is DaikinThermostatMode.UNKNOWN
+
+    async def test_outdoor_reversing_valve_unexpected_value_becomes_unknown(
+        self, daikin_client: DaikinOne
+    ) -> None:
+        device_data = _make_device({**OUTDOOR_UNIT_DATA, "ctReversingValve": 42})
+
+        with patch.object(daikin_client._transport, "request", new_callable=AsyncMock) as mock_req:
+            mock_req.return_value = [device_data]
+            await daikin_client.update()
+
+        unit = next(
+            e
+            for e in daikin_client.get_thermostats()["device123"].equipment.values()
+            if isinstance(e, DaikinOutdoorUnit)
+        )
+        assert unit.reversing_valve is DaikinOutdoorUnitReversingValveStatus.UNKNOWN
+
+    async def test_outdoor_heater_unexpected_value_becomes_unknown(
+        self, daikin_client: DaikinOne
+    ) -> None:
+        device_data = _make_device({**OUTDOOR_UNIT_DATA, "ctCrankCaseHeaterOnOff": 42})
+
+        with patch.object(daikin_client._transport, "request", new_callable=AsyncMock) as mock_req:
+            mock_req.return_value = [device_data]
+            await daikin_client.update()
+
+        unit = next(
+            e
+            for e in daikin_client.get_thermostats()["device123"].equipment.values()
+            if isinstance(e, DaikinOutdoorUnit)
+        )
+        assert unit.crank_case_heater is DaikinOutdoorUnitHeaterStatus.UNKNOWN
