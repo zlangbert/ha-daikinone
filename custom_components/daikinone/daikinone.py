@@ -304,9 +304,16 @@ class DaikinOne:
         devices = await self.__req(DAIKIN_API_URL_DEVICE_DATA)
         devices = [DaikinDeviceDataResponse(**device) for device in devices]
 
-        self.__thermostats = {device.id: self.__map_thermostat(device) for device in devices}
+        valid_devices = []
+        for device in devices:
+            if not device.online and len(device.data) == 0:
+                log.warning(f"Skipping offline device with no data: {device.name} ({device.id})")
+            else:
+                valid_devices.append(device)
 
-        log.info(f"Cached {len(self.__thermostats)} thermostats")
+        self.__thermostats = {device.id: self.__map_thermostat(device) for device in valid_devices}
+
+        log.info(f"Cached {len(self.__thermostats)} thermostats ({len(devices) - len(valid_devices)} skipped offline)")
 
     def __map_thermostat(self, payload: DaikinDeviceDataResponse) -> DaikinThermostat:
         capabilities = set(DaikinThermostatCapability)

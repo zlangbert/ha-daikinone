@@ -13,7 +13,6 @@ log = logging.getLogger(__name__)
 
 
 class DaikinOneEntity[D: DaikinDevice](Entity):
-
     _device: D
     _data: DaikinOneData
 
