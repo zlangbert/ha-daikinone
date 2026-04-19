@@ -39,7 +39,6 @@ async def async_setup_entry(
 
 
 class DaikinOneFanSpeedSelect(DaikinOneEntity[DaikinThermostat], SelectEntity):
-
     def __init__(self, description: SelectEntityDescription, data: DaikinOneData, thermostat: DaikinThermostat):
         super().__init__(data, thermostat)
 

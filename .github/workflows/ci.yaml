@@ -13,20 +13,16 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - uses: actions/cache@v3
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
-    - name: Install uv
-      uses: astral-sh/setup-uv@v5
-    - name: Sync
-      run: uv sync
-    - name: Type Check
-      run: uv run pyright
-    - name: Lint
-      run: uv run ruff check .
-    - name: Format Check
-      run: uv run black --check custom_components
+      - uses: actions/checkout@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - name: Sync
+        run: uv sync
+      - name: Type Check
+        run: uv run ty check custom_components
+      - name: Lint
+        run: uv run ruff check .
+      - name: Format Check
+        run: uv run ruff format --check custom_components
