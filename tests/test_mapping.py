@@ -298,6 +298,42 @@ class TestEquipmentSkippedOnInvalidIdentity:
         assert unit.id == "AH-MODEL-AH-SERIAL"
 
 
+class TestEquipmentUnitTypeAbsent:
+    """P1/P2 mini-split payloads omit the ``ct*UnitType`` keys entirely; the mapping
+    must treat that as 'equipment not present' rather than KeyError-ing on setup."""
+
+    async def test_no_equipment_mapped_when_unit_type_keys_missing(
+        self, daikin_client: DaikinOne
+    ) -> None:
+        device_data = _make_device()
+        for key in ("ctAHUnitType", "ctIFCUnitType", "ctOutdoorUnitType", "ctCoilUnitType"):
+            del device_data["data"][key]
+
+        with patch.object(daikin_client._transport, "request", new_callable=AsyncMock) as mock_req:
+            mock_req.return_value = [device_data]
+            await daikin_client.update()
+
+        thermostat = daikin_client.get_thermostats()["device123"]
+        assert thermostat.equipment == {}
+
+    async def test_partial_unit_type_keys_gate_only_their_own_equipment(
+        self, daikin_client: DaikinOne
+    ) -> None:
+        device_data = _make_device(OUTDOOR_UNIT_DATA)
+        del device_data["data"]["ctAHUnitType"]
+        del device_data["data"]["ctIFCUnitType"]
+        del device_data["data"]["ctCoilUnitType"]
+
+        with patch.object(daikin_client._transport, "request", new_callable=AsyncMock) as mock_req:
+            mock_req.return_value = [device_data]
+            await daikin_client.update()
+
+        thermostat = daikin_client.get_thermostats()["device123"]
+        assert any(isinstance(e, DaikinOutdoorUnit) for e in thermostat.equipment.values())
+        assert not any(isinstance(e, DaikinIndoorUnit) for e in thermostat.equipment.values())
+        assert not any(isinstance(e, DaikinEEVCoil) for e in thermostat.equipment.values())
+
+
 class TestOutdoorUnitName:
     async def test_heat_pump_when_max_rps_positive(self, daikin_client: DaikinOne) -> None:
         device_data = _make_device({**OUTDOOR_UNIT_DATA, "ctOutdoorHeatMaxRPS": 100})
