@@ -20,7 +20,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from custom_components.daikinone import DaikinOneData, DOMAIN
 from custom_components.daikinone.entity import DaikinOneEntity
-from custom_components.daikinone.daikinone import (
+from custom_components.daikinone.client.models import (
     DaikinThermostat,
     DaikinThermostatCapability,
     DaikinThermostatMode,

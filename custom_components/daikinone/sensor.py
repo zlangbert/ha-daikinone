@@ -21,7 +21,7 @@ from homeassistant.helpers.typing import StateType
 from custom_components.daikinone import DOMAIN, DaikinOneData
 from custom_components.daikinone.const import CONF_OPTION_ENTITY_UID_SCHEMA_VERSION_KEY
 from custom_components.daikinone.entity import DaikinOneEntity
-from custom_components.daikinone.daikinone import (
+from custom_components.daikinone.client.models import (
     DaikinDevice,
     DaikinEEVCoil,
     DaikinOutdoorUnitReversingValveStatus,

@@ -7,7 +7,7 @@ from homeassistant.helpers.entity import Entity
 
 from custom_components.daikinone import DaikinOneData
 from custom_components.daikinone.const import DOMAIN, MANUFACTURER
-from custom_components.daikinone.daikinone import DaikinDevice, DaikinEquipment, DaikinThermostat
+from custom_components.daikinone.client.models import DaikinDevice, DaikinEquipment, DaikinThermostat
 
 log = logging.getLogger(__name__)
 

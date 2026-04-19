@@ -3,10 +3,10 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from custom_components.daikinone.daikinone import (
+from custom_components.daikinone.client.client import DaikinOne
+from custom_components.daikinone.client.models import (
     DaikinEEVCoil,
     DaikinIndoorUnit,
-    DaikinOne,
     DaikinOutdoorUnit,
     DaikinUserCredentials,
 )
@@ -261,7 +261,7 @@ class TestMappingPreservesValidFields:
         ah = {**AIR_HANDLER_DATA, "ctAHFanRequestedDemand": 255, "ctAHHeatRequestedDemand": 255}
         device_data = _make_device(ah)
 
-        with patch.object(daikin_client, "_DaikinOne__req", new_callable=AsyncMock) as mock_req:
+        with patch.object(daikin_client._transport, "request", new_callable=AsyncMock) as mock_req:
             mock_req.return_value = [device_data]
             await daikin_client.update()
 
@@ -275,7 +275,7 @@ class TestMappingPreservesValidFields:
         ah = {**AIR_HANDLER_DATA, "ctIndoorPower": 65535}
         device_data = _make_device(ah)
 
-        with patch.object(daikin_client, "_DaikinOne__req", new_callable=AsyncMock) as mock_req:
+        with patch.object(daikin_client._transport, "request", new_callable=AsyncMock) as mock_req:
             mock_req.return_value = [device_data]
             await daikin_client.update()
 
@@ -288,7 +288,7 @@ class TestMappingPreservesValidFields:
         od = {**OUTDOOR_UNIT_DATA, "ctOutdoorAirTemperature": 32767, "ctInverterFinTemp": 255}
         device_data = _make_device(od)
 
-        with patch.object(daikin_client, "_DaikinOne__req", new_callable=AsyncMock) as mock_req:
+        with patch.object(daikin_client._transport, "request", new_callable=AsyncMock) as mock_req:
             mock_req.return_value = [device_data]
             await daikin_client.update()
 
@@ -302,7 +302,7 @@ class TestMappingPreservesValidFields:
         od = {**OUTDOOR_UNIT_DATA, "ctOutdoorCompressorRunTime": 4294967295}
         device_data = _make_device(od)
 
-        with patch.object(daikin_client, "_DaikinOne__req", new_callable=AsyncMock) as mock_req:
+        with patch.object(daikin_client._transport, "request", new_callable=AsyncMock) as mock_req:
             mock_req.return_value = [device_data]
             await daikin_client.update()
 
@@ -314,7 +314,7 @@ class TestMappingPreservesValidFields:
         eev = {**EEV_COIL_DATA, "ctEEVCoilPressureSensor": 32767}
         device_data = _make_device(eev)
 
-        with patch.object(daikin_client, "_DaikinOne__req", new_callable=AsyncMock) as mock_req:
+        with patch.object(daikin_client._transport, "request", new_callable=AsyncMock) as mock_req:
             mock_req.return_value = [device_data]
             await daikin_client.update()
 
@@ -327,7 +327,7 @@ class TestMappingPreservesValidFields:
         device_data = _make_device()
         device_data["data"]["humIndoor"] = 255
 
-        with patch.object(daikin_client, "_DaikinOne__req", new_callable=AsyncMock) as mock_req:
+        with patch.object(daikin_client._transport, "request", new_callable=AsyncMock) as mock_req:
             mock_req.return_value = [device_data]
             await daikin_client.update()
 
@@ -340,7 +340,7 @@ class TestMappingPreservesValidFields:
         ah = {**AIR_HANDLER_DATA, "ctAHFanRequestedDemand": 255, "ctIndoorPower": 65535}
         device_data = _make_device(ah)
 
-        with patch.object(daikin_client, "_DaikinOne__req", new_callable=AsyncMock) as mock_req:
+        with patch.object(daikin_client._transport, "request", new_callable=AsyncMock) as mock_req:
             mock_req.return_value = [device_data]
             await daikin_client.update()
 
@@ -359,7 +359,7 @@ class TestEquipmentIdStability:
         ah = {**AIR_HANDLER_DATA, "ctAHSerialNoCharacter1_15": "he\ufffdlo"}
         device_data = _make_device(ah)
 
-        with patch.object(daikin_client, "_DaikinOne__req", new_callable=AsyncMock) as mock_req:
+        with patch.object(daikin_client._transport, "request", new_callable=AsyncMock) as mock_req:
             mock_req.return_value = [device_data]
             await daikin_client.update()
 
@@ -372,7 +372,7 @@ class TestEquipmentIdStability:
         od = {**OUTDOOR_UNIT_DATA, "ctOutdoorModelNoCharacter1_15": "bad\ufffddata"}
         device_data = _make_device(od)
 
-        with patch.object(daikin_client, "_DaikinOne__req", new_callable=AsyncMock) as mock_req:
+        with patch.object(daikin_client._transport, "request", new_callable=AsyncMock) as mock_req:
             mock_req.return_value = [device_data]
             await daikin_client.update()
 
@@ -386,7 +386,7 @@ class TestEquipmentIdStability:
         eev = {**EEV_COIL_DATA, "ctCoilSerialNoCharacter1_15": "cor\ufffdupt"}
         device_data = _make_device(eev)
 
-        with patch.object(daikin_client, "_DaikinOne__req", new_callable=AsyncMock) as mock_req:
+        with patch.object(daikin_client._transport, "request", new_callable=AsyncMock) as mock_req:
             mock_req.return_value = [device_data]
             await daikin_client.update()
 
@@ -398,7 +398,7 @@ class TestEquipmentIdStability:
     async def test_identity_preserved_when_fields_valid(self, daikin_client: DaikinOne) -> None:
         device_data = _make_device(AIR_HANDLER_DATA)
 
-        with patch.object(daikin_client, "_DaikinOne__req", new_callable=AsyncMock) as mock_req:
+        with patch.object(daikin_client._transport, "request", new_callable=AsyncMock) as mock_req:
             mock_req.return_value = [device_data]
             await daikin_client.update()
 
