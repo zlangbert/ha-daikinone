@@ -9,3 +9,9 @@ services:
       - $PWD/custom_components:/config/custom_components
       - /etc/localtime:/etc/localtime:ro
     restart: unless-stopped
+    develop:
+      watch:
+        - action: restart
+          path: ./custom_components
+        - action: restart
+          path: ./.homeassistant/config/configuration.yaml
