@@ -236,6 +236,7 @@ class DaikinOneThermostat(DaikinOneEntity[DaikinThermostat], ClimateEntity):
                         operation=lambda: self._data.daikin.set_thermostat_home_set_points(
                             self._device.id,
                             heat=temperature,
+                            override_schedule=self._device.schedule.enabled,
                         ),
                         optimistic_update=update,
                         check=lambda t: t.set_point_heat == temperature,
@@ -252,6 +253,7 @@ class DaikinOneThermostat(DaikinOneEntity[DaikinThermostat], ClimateEntity):
                         operation=lambda: self._data.daikin.set_thermostat_home_set_points(
                             self._device.id,
                             cool=temperature,
+                            override_schedule=self._device.schedule.enabled,
                         ),
                         optimistic_update=update,
                         check=lambda t: t.set_point_cool == temperature,
