@@ -9,7 +9,7 @@ tasks:
   dev:
     desc: Run Home Assistant in Docker with live-reload
     cmds:
-      - docker compose up --watch
+      - docker compose up
 
   check:
     desc: Run type check, lint, format check, and tests
