@@ -3,27 +3,23 @@ name = "ha-daikinone"
 version = "0.1.0"
 description = "Daikin One+ integration for Home Assistant"
 authors = [{ name = "Zach Langbert", email = "zach.langbert@gmail.com" }]
-dependencies = ["homeassistant~=2024.5.1", "pydantic~=2.10.4", "backoff~=2.2.1"]
 readme = "README.md"
-requires-python = ">= 3.12"
+requires-python = ">= 3.14.2"
 
-[tool.uv]
-dev-dependencies = [
-    "setuptools>=69.0.3",
-    "ruff>=0.2.1",
-    "pyright>=1.1.350",
-    "black[d]>=24.1.1",
+dependencies = [
+    "homeassistant~=2026.4.0",
+    "pydantic~=2.13.1",
+    "backoff~=2.2.1"
 ]
 
-[tool.pyright]
-venvPath = "."
-venv = ".venv"
-pythonVersion = "3.12"
-typeCheckingMode = "strict"
-reportMissingTypeStubs = false
+[dependency-groups]
+dev = [
+    "ruff",
+    "ty",
+]
 
 [tool.ruff]
 line-length = 120
 
-[tool.black]
-line-length = 120
+[tool.ruff.format]
+docstring-code-format = true

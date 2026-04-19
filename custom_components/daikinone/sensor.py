@@ -909,7 +909,7 @@ class DaikinOneEquipmentSensor[E: DaikinEquipment](DaikinOneSensor[E]):
     async def async_get_device(self) -> E:
         thermostat = self._data.daikin.get_thermostat(self._device.thermostat_id)
         # TODO: look at this type issue more later
-        return thermostat.equipment[self._device.id]  # type: ignore[return-value]
+        return thermostat.equipment[self._device.id]  # ty: ignore[invalid-return-type]
 
     def update_entity_attributes(self) -> None:
         self._attr_native_value = self._attribute(self._device)
