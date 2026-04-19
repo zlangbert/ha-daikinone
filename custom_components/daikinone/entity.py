@@ -76,8 +76,17 @@ class DaikinOneEntity[D: DaikinDevice](Entity):
 
         log.debug("Updating daikinone entity %s for device %s", self.unique_id, self._device.id)
         await self._data.update(no_throttle=no_throttle)
-        self._device = await self.async_get_device()
+        try:
+            self._device = await self.async_get_device()
+        except KeyError:
+            # Backing device missing from the cache this refresh (e.g. equipment skipped
+            # due to garbage identity strings). Mark unavailable and retain the last-known
+            # _device so attributes recover cleanly on the next successful refresh.
+            log.debug("Device %s missing this refresh, marking entity unavailable", self._device.id)
+            self._attr_available = False
+            return
 
+        self._attr_available = True
         self.update_entity_attributes()
 
     async def update_state_optimistically(
