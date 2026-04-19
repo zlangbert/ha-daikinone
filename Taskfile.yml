@@ -12,11 +12,12 @@ tasks:
       - docker compose up --watch
 
   check:
-    desc: Run type check, lint, and format check
+    desc: Run type check, lint, format check, and tests
     cmds:
       - uv run ty check custom_components
       - uv run ruff check .
       - uv run ruff format --check custom_components
+      - uv run pytest
 
   release:
     desc: "Cut a release (usage: task release -- 0.9.7)"

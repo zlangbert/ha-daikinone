@@ -34,29 +34,29 @@ class DaikinUserCredentials:
 class DaikinDevice:
     id: str
     name: str
-    model: str
-    firmware_version: str
+    model: str | None
+    firmware_version: str | None
 
 
 @dataclass
 class DaikinEquipment(DaikinDevice):
     thermostat_id: str
-    serial: str
+    serial: str | None
 
 
 @dataclass
 class DaikinIndoorUnit(DaikinEquipment):
-    mode: str
-    current_airflow: int
-    fan_demand_requested_percent: int
-    fan_demand_current_percent: int
-    heat_demand_requested_percent: int
-    heat_demand_current_percent: int
+    mode: str | None
+    current_airflow: int | None
+    fan_demand_requested_percent: int | None
+    fan_demand_current_percent: int | None
+    heat_demand_requested_percent: int | None
+    heat_demand_current_percent: int | None
     cool_demand_requested_percent: int | None
     cool_demand_current_percent: int | None
-    humidification_demand_requested_percent: int
+    humidification_demand_requested_percent: int | None
     dehumidification_demand_requested_percent: int | None
-    power_usage: float
+    power_usage: float | None
 
 
 class DaikinOutdoorUnitReversingValveStatus(Enum):
@@ -74,30 +74,30 @@ class DaikinOutdoorUnitHeaterStatus(Enum):
 @dataclass
 class DaikinOutdoorUnit(DaikinEquipment):
     inverter_software_version: str | None
-    total_runtime: timedelta
-    mode: str
-    compressor_speed_target: int
-    compressor_speed_current: int
-    outdoor_fan_target_rpm: int
-    outdoor_fan_rpm: int
-    suction_pressure_psi: int
-    eev_opening_percent: int
+    total_runtime: timedelta | None
+    mode: str | None
+    compressor_speed_target: int | None
+    compressor_speed_current: int | None
+    outdoor_fan_target_rpm: int | None
+    outdoor_fan_rpm: int | None
+    suction_pressure_psi: int | None
+    eev_opening_percent: int | None
     reversing_valve: DaikinOutdoorUnitReversingValveStatus
-    heat_demand_percent: int
-    cool_demand_percent: int
-    fan_demand_percent: int
-    fan_demand_airflow: int
-    dehumidify_demand_percent: int
-    air_temperature: Temperature
-    coil_temperature: Temperature
-    discharge_temperature: Temperature
-    liquid_temperature: Temperature
-    defrost_sensor_temperature: Temperature
-    inverter_fin_temperature: Temperature
-    power_usage: float
-    compressor_amps: float
-    inverter_amps: float
-    fan_motor_amps: float
+    heat_demand_percent: int | None
+    cool_demand_percent: int | None
+    fan_demand_percent: int | None
+    fan_demand_airflow: int | None
+    dehumidify_demand_percent: int | None
+    air_temperature: Temperature | None
+    coil_temperature: Temperature | None
+    discharge_temperature: Temperature | None
+    liquid_temperature: Temperature | None
+    defrost_sensor_temperature: Temperature | None
+    inverter_fin_temperature: Temperature | None
+    power_usage: float | None
+    compressor_amps: float | None
+    inverter_amps: float | None
+    fan_motor_amps: float | None
     crank_case_heater: DaikinOutdoorUnitHeaterStatus
     drain_pan_heater: DaikinOutdoorUnitHeaterStatus
     preheat_heater: DaikinOutdoorUnitHeaterStatus
@@ -138,10 +138,10 @@ class DaikinOneAirQualitySensorIndoor:
 
 @dataclass
 class DaikinEEVCoil(DaikinEquipment):
-    indoor_superheat_temperature: Temperature
-    liquid_temperature: Temperature
-    suction_temperature: Temperature
-    pressure_psi: int
+    indoor_superheat_temperature: Temperature | None
+    liquid_temperature: Temperature | None
+    suction_temperature: Temperature | None
+    pressure_psi: int | None
 
 
 class DaikinThermostatCapability(Enum):
@@ -193,16 +193,16 @@ class DaikinThermostat(DaikinDevice):
     fan_mode: DaikinThermostatFanMode
     fan_speed: DaikinThermostatFanSpeed
     schedule: DaikinThermostatSchedule
-    indoor_temperature: Temperature
-    indoor_humidity: int
-    set_point_heat: Temperature
-    set_point_heat_min: Temperature
-    set_point_heat_max: Temperature
-    set_point_cool: Temperature
-    set_point_cool_min: Temperature
-    set_point_cool_max: Temperature
-    outdoor_temperature: Temperature
-    outdoor_humidity: int
+    indoor_temperature: Temperature | None
+    indoor_humidity: int | None
+    set_point_heat: Temperature | None
+    set_point_heat_min: Temperature | None
+    set_point_heat_max: Temperature | None
+    set_point_cool: Temperature | None
+    set_point_cool_min: Temperature | None
+    set_point_cool_max: Temperature | None
+    outdoor_temperature: Temperature | None
+    outdoor_humidity: int | None
     air_quality_outdoor: DaikinOneAirQualitySensorOutdoor | None
     air_quality_indoor: DaikinOneAirQualitySensorIndoor | None
     equipment: dict[str, DaikinEquipment]
@@ -300,18 +300,70 @@ class DaikinOne:
             body={"fanCirculateSpeed": fan_speed.value},
         )
 
-    async def __refresh_thermostats(self):
+    # Sentinel values the Daikin API returns when data is unavailable (e.g. during thermostat restart)
+    _SENTINEL_UINT8 = 255
+    _SENTINEL_UINT16 = 65535
+    _SENTINEL_INT16 = 32767
+    _SENTINEL_UINT32 = 4294967295
+
+    @staticmethod
+    def __sanitize_int(value: int, sentinel: int, scale: float = 1) -> int | None:
+        """Return None if value matches a sentinel, otherwise apply scale and round to int"""
+        return None if value == sentinel else round(value * scale)
+
+    @staticmethod
+    def __sanitize_float(value: int, sentinel: int, scale: float = 1) -> float | None:
+        """Return None if value matches a sentinel, otherwise apply scale factor"""
+        return None if value == sentinel else value * scale
+
+    @classmethod
+    def __sanitize_temperature(
+        cls, value: int, from_fahrenheit: bool = True, sentinel: int | None = None, scale: float = 0.1
+    ) -> Temperature | None:
+        """Return None if a temperature value is sentinel, otherwise convert"""
+        if value == (sentinel if sentinel is not None else cls._SENTINEL_INT16):
+            return None
+        temp = value * scale
+        return Temperature.from_fahrenheit(temp) if from_fahrenheit else Temperature.from_celsius(temp)
+
+    @staticmethod
+    def __sanitize_celsius(value: float) -> Temperature | None:
+        """Return None if a Celsius temperature is outside a reasonable range"""
+        if not -60 <= value <= 80:
+            return None
+        return Temperature.from_celsius(value)
+
+    @staticmethod
+    def __sanitize_humidity(value: int) -> int | None:
+        """Return None if humidity is outside the valid 0-100% range"""
+        if not 0 <= value <= 100:
+            return None
+        return value
+
+    @classmethod
+    def __sanitize_runtime(cls, value: int) -> timedelta | None:
+        """Return None if a runtime value is the uint32 sentinel, otherwise convert to timedelta"""
+        return None if value == cls._SENTINEL_UINT32 else timedelta(hours=value)
+
+    @staticmethod
+    def __sanitize_string(value: str) -> str | None:
+        """Return None if a string contains replacement characters (corrupted data)"""
+        stripped = value.strip()
+        return None if "\ufffd" in stripped else stripped
+
+    async def __refresh_thermostats(self) -> None:
         devices = await self.__req(DAIKIN_API_URL_DEVICE_DATA)
         devices = [DaikinDeviceDataResponse(**device) for device in devices]
 
-        valid_devices = []
+        valid_devices: list[DaikinDeviceDataResponse] = []
         for device in devices:
             if not device.online and len(device.data) == 0:
                 log.warning(f"Skipping offline device with no data: {device.name} ({device.id})")
             else:
                 valid_devices.append(device)
 
-        self.__thermostats = {device.id: self.__map_thermostat(device) for device in valid_devices}
+        for device in valid_devices:
+            self.__thermostats[device.id] = self.__map_thermostat(device)
 
         log.info(f"Cached {len(self.__thermostats)} thermostats ({len(devices) - len(valid_devices)} skipped offline)")
 
@@ -337,16 +389,16 @@ class DaikinOne:
             fan_mode=DaikinThermostatFanMode(payload.data["fanCirculate"]),
             fan_speed=DaikinThermostatFanSpeed(payload.data["fanCirculateSpeed"]),
             schedule=DaikinThermostatSchedule(enabled=payload.data["schedEnabled"]),
-            indoor_temperature=Temperature.from_celsius(payload.data["tempIndoor"]),
-            indoor_humidity=payload.data["humIndoor"],
-            set_point_heat=Temperature.from_celsius(payload.data["hspActive"]),
-            set_point_heat_min=Temperature.from_celsius(payload.data["EquipProtocolMinHeatSetpoint"]),
-            set_point_heat_max=Temperature.from_celsius(payload.data["EquipProtocolMaxHeatSetpoint"]),
-            set_point_cool=Temperature.from_celsius(payload.data["cspActive"]),
-            set_point_cool_min=Temperature.from_celsius(payload.data["EquipProtocolMinCoolSetpoint"]),
-            set_point_cool_max=Temperature.from_celsius(payload.data["EquipProtocolMaxCoolSetpoint"]),
-            outdoor_temperature=Temperature.from_celsius(payload.data["tempOutdoor"]),
-            outdoor_humidity=payload.data["humOutdoor"],
+            indoor_temperature=self.__sanitize_celsius(payload.data["tempIndoor"]),
+            indoor_humidity=self.__sanitize_humidity(payload.data["humIndoor"]),
+            set_point_heat=self.__sanitize_celsius(payload.data["hspActive"]),
+            set_point_heat_min=self.__sanitize_celsius(payload.data["EquipProtocolMinHeatSetpoint"]),
+            set_point_heat_max=self.__sanitize_celsius(payload.data["EquipProtocolMaxHeatSetpoint"]),
+            set_point_cool=self.__sanitize_celsius(payload.data["cspActive"]),
+            set_point_cool_min=self.__sanitize_celsius(payload.data["EquipProtocolMinCoolSetpoint"]),
+            set_point_cool_max=self.__sanitize_celsius(payload.data["EquipProtocolMaxCoolSetpoint"]),
+            outdoor_temperature=self.__sanitize_celsius(payload.data["tempOutdoor"]),
+            outdoor_humidity=self.__sanitize_humidity(payload.data["humOutdoor"]),
             air_quality_outdoor=self.__map_air_quality_outdoor(payload),
             air_quality_indoor=self.__map_air_quality_indoor(payload),
             equipment=self.__map_equipment(payload),
@@ -383,8 +435,8 @@ class DaikinOne:
 
         # air handler
         if payload.data["ctAHUnitType"] < 255:
-            model = payload.data["ctAHModelNoCharacter1_15"].strip()
-            serial = payload.data["ctAHSerialNoCharacter1_15"].strip()
+            model = self.__sanitize_string(payload.data["ctAHModelNoCharacter1_15"])
+            serial = self.__sanitize_string(payload.data["ctAHSerialNoCharacter1_15"])
             eid = f"{model}-{serial}"
             name = "Air Handler"
 
@@ -393,25 +445,35 @@ class DaikinOne:
                 thermostat_id=payload.id,
                 name=name,
                 model=model,
-                firmware_version=payload.data["ctAHControlSoftwareVersion"].strip(),
+                firmware_version=self.__sanitize_string(payload.data["ctAHControlSoftwareVersion"]),
                 serial=serial,
-                mode=payload.data["ctAHMode"].strip().capitalize(),
-                current_airflow=payload.data["ctAHCurrentIndoorAirflow"],
-                fan_demand_requested_percent=round(payload.data["ctAHFanRequestedDemand"] / 2),
-                fan_demand_current_percent=round(payload.data["ctAHFanCurrentDemandStatus"] / 2),
-                heat_demand_requested_percent=round(payload.data["ctAHHeatRequestedDemand"] / 2),
-                heat_demand_current_percent=round(payload.data["ctAHHeatCurrentDemandStatus"] / 2),
+                mode=(s.capitalize() if (s := self.__sanitize_string(payload.data["ctAHMode"])) else None),
+                current_airflow=self.__sanitize_int(payload.data["ctAHCurrentIndoorAirflow"], self._SENTINEL_UINT16),
+                fan_demand_requested_percent=self.__sanitize_int(
+                    payload.data["ctAHFanRequestedDemand"], self._SENTINEL_UINT8, 0.5
+                ),
+                fan_demand_current_percent=self.__sanitize_int(
+                    payload.data["ctAHFanCurrentDemandStatus"], self._SENTINEL_UINT8, 0.5
+                ),
+                heat_demand_requested_percent=self.__sanitize_int(
+                    payload.data["ctAHHeatRequestedDemand"], self._SENTINEL_UINT8, 0.5
+                ),
+                heat_demand_current_percent=self.__sanitize_int(
+                    payload.data["ctAHHeatCurrentDemandStatus"], self._SENTINEL_UINT8, 0.5
+                ),
                 cool_demand_requested_percent=None,
                 cool_demand_current_percent=None,
-                humidification_demand_requested_percent=round(payload.data["ctAHHumidificationRequestedDemand"] / 2),
+                humidification_demand_requested_percent=self.__sanitize_int(
+                    payload.data["ctAHHumidificationRequestedDemand"], self._SENTINEL_UINT8, 0.5
+                ),
                 dehumidification_demand_requested_percent=None,
-                power_usage=payload.data["ctIndoorPower"] / 10,
+                power_usage=self.__sanitize_float(payload.data["ctIndoorPower"], self._SENTINEL_UINT16, 0.1),
             )
 
         # furnace
         if payload.data["ctIFCUnitType"] < 255:
-            model = payload.data["ctIFCModelNoCharacter1_15"].strip()
-            serial = payload.data["ctIFCSerialNoCharacter1_15"].strip()
+            model = self.__sanitize_string(payload.data["ctIFCModelNoCharacter1_15"])
+            serial = self.__sanitize_string(payload.data["ctIFCSerialNoCharacter1_15"])
             eid = f"{model}-{serial}"
             name = "Furnace"
 
@@ -420,25 +482,45 @@ class DaikinOne:
                 thermostat_id=payload.id,
                 name=name,
                 model=model,
-                firmware_version=payload.data["ctIFCControlSoftwareVersion"].strip(),
+                firmware_version=self.__sanitize_string(payload.data["ctIFCControlSoftwareVersion"]),
                 serial=serial,
-                mode=payload.data["ctIFCOperatingHeatCoolMode"].strip().capitalize(),
-                current_airflow=payload.data["ctIFCIndoorBlowerAirflow"],
-                fan_demand_requested_percent=round(payload.data["ctIFCFanRequestedDemandPercent"] / 2),
-                fan_demand_current_percent=round(payload.data["ctIFCCurrentFanActualStatus"] / 2),
-                heat_demand_requested_percent=round(payload.data["ctIFCHeatRequestedDemandPercent"] / 2),
-                heat_demand_current_percent=round(payload.data["ctIFCCurrentHeatActualStatus"] / 2),
-                cool_demand_requested_percent=round(payload.data["ctIFCCoolRequestedDemandPercent"] / 2),
-                cool_demand_current_percent=round(payload.data["ctIFCCurrentCoolActualStatus"] / 2),
-                humidification_demand_requested_percent=round(payload.data["ctIFCHumRequestedDemandPercent"] / 2),
-                dehumidification_demand_requested_percent=round(payload.data["ctIFCDehumRequestedDemandPercent"] / 2),
-                power_usage=payload.data["ctIndoorPower"] / 10,
+                mode=(
+                    s.capitalize()
+                    if (s := self.__sanitize_string(payload.data["ctIFCOperatingHeatCoolMode"]))
+                    else None
+                ),
+                current_airflow=self.__sanitize_int(payload.data["ctIFCIndoorBlowerAirflow"], self._SENTINEL_UINT16),
+                fan_demand_requested_percent=self.__sanitize_int(
+                    payload.data["ctIFCFanRequestedDemandPercent"], self._SENTINEL_UINT8, 0.5
+                ),
+                fan_demand_current_percent=self.__sanitize_int(
+                    payload.data["ctIFCCurrentFanActualStatus"], self._SENTINEL_UINT8, 0.5
+                ),
+                heat_demand_requested_percent=self.__sanitize_int(
+                    payload.data["ctIFCHeatRequestedDemandPercent"], self._SENTINEL_UINT8, 0.5
+                ),
+                heat_demand_current_percent=self.__sanitize_int(
+                    payload.data["ctIFCCurrentHeatActualStatus"], self._SENTINEL_UINT8, 0.5
+                ),
+                cool_demand_requested_percent=self.__sanitize_int(
+                    payload.data["ctIFCCoolRequestedDemandPercent"], self._SENTINEL_UINT8, 0.5
+                ),
+                cool_demand_current_percent=self.__sanitize_int(
+                    payload.data["ctIFCCurrentCoolActualStatus"], self._SENTINEL_UINT8, 0.5
+                ),
+                humidification_demand_requested_percent=self.__sanitize_int(
+                    payload.data["ctIFCHumRequestedDemandPercent"], self._SENTINEL_UINT8, 0.5
+                ),
+                dehumidification_demand_requested_percent=self.__sanitize_int(
+                    payload.data["ctIFCDehumRequestedDemandPercent"], self._SENTINEL_UINT8, 0.5
+                ),
+                power_usage=self.__sanitize_float(payload.data["ctIndoorPower"], self._SENTINEL_UINT16, 0.1),
             )
 
         # outdoor unit
         if payload.data["ctOutdoorUnitType"] < 255:
-            model = payload.data["ctOutdoorModelNoCharacter1_15"].strip()
-            serial = payload.data["ctOutdoorSerialNoCharacter1_15"].strip()
+            model = self.__sanitize_string(payload.data["ctOutdoorModelNoCharacter1_15"])
+            serial = self.__sanitize_string(payload.data["ctOutdoorSerialNoCharacter1_15"])
             eid = f"{model}-{serial}"
 
             # assume it can cool, and if it can also heat it should be a heat pump
@@ -452,34 +534,52 @@ class DaikinOne:
                 name=name,
                 model=model,
                 serial=serial,
-                firmware_version=payload.data["ctOutdoorControlSoftwareVersion"].strip(),
-                inverter_software_version=payload.data["ctOutdoorInverterSoftwareVersion"].strip(),
-                total_runtime=timedelta(hours=payload.data["ctOutdoorCompressorRunTime"]),
-                mode=payload.data["ctOutdoorMode"].strip().capitalize(),
-                compressor_speed_target=payload.data["ctTargetCompressorspeed"],
-                compressor_speed_current=payload.data["ctCurrentCompressorRPS"],
-                outdoor_fan_target_rpm=payload.data["ctTargetODFanRPM"] * 10,
-                outdoor_fan_rpm=payload.data["ctOutdoorFanRPM"],
-                suction_pressure_psi=payload.data["ctOutdoorSuctionPressure"],
-                eev_opening_percent=payload.data["ctOutdoorEEVOpening"],
-                reversing_valve=DaikinOutdoorUnitReversingValveStatus(payload.data["ctReversingValve"]),
-                heat_demand_percent=round(payload.data["ctOutdoorHeatRequestedDemand"] / 2),
-                cool_demand_percent=round(payload.data["ctOutdoorCoolRequestedDemand"] / 2),
-                fan_demand_percent=round(payload.data["ctOutdoorFanRequestedDemandPercentage"] / 2),
-                fan_demand_airflow=payload.data["ctOutdoorRequestedIndoorAirflow"],
-                dehumidify_demand_percent=round(payload.data["ctOutdoorDeHumidificationRequestedDemand"] / 2),
-                air_temperature=Temperature.from_fahrenheit(payload.data["ctOutdoorAirTemperature"] / 10),
-                coil_temperature=Temperature.from_fahrenheit(payload.data["ctOutdoorCoilTemperature"] / 10),
-                discharge_temperature=Temperature.from_fahrenheit(payload.data["ctOutdoorDischargeTemperature"] / 10),
-                liquid_temperature=Temperature.from_fahrenheit(payload.data["ctOutdoorLiquidTemperature"] / 10),
-                defrost_sensor_temperature=Temperature.from_fahrenheit(
-                    payload.data["ctOutdoorDefrostSensorTemperature"] / 10
+                firmware_version=self.__sanitize_string(payload.data["ctOutdoorControlSoftwareVersion"]),
+                inverter_software_version=self.__sanitize_string(payload.data["ctOutdoorInverterSoftwareVersion"]),
+                total_runtime=self.__sanitize_runtime(payload.data["ctOutdoorCompressorRunTime"]),
+                mode=(s.capitalize() if (s := self.__sanitize_string(payload.data["ctOutdoorMode"])) else None),
+                compressor_speed_target=self.__sanitize_int(
+                    payload.data["ctTargetCompressorspeed"], self._SENTINEL_UINT8
                 ),
-                inverter_fin_temperature=Temperature.from_celsius(payload.data["ctInverterFinTemp"]),
-                power_usage=payload.data["ctOutdoorPower"] * 10,
-                compressor_amps=payload.data["ctCompressorCurrent"] / 10,
-                inverter_amps=payload.data["ctInverterCurrent"] / 10,
-                fan_motor_amps=payload.data["ctODFanMotorCurrent"] / 10,
+                compressor_speed_current=self.__sanitize_int(
+                    payload.data["ctCurrentCompressorRPS"], self._SENTINEL_UINT16
+                ),
+                outdoor_fan_target_rpm=self.__sanitize_int(payload.data["ctTargetODFanRPM"], self._SENTINEL_UINT8, 10),
+                outdoor_fan_rpm=self.__sanitize_int(payload.data["ctOutdoorFanRPM"], self._SENTINEL_UINT16),
+                suction_pressure_psi=self.__sanitize_int(
+                    payload.data["ctOutdoorSuctionPressure"], self._SENTINEL_INT16
+                ),
+                eev_opening_percent=self.__sanitize_int(payload.data["ctOutdoorEEVOpening"], self._SENTINEL_UINT8),
+                reversing_valve=DaikinOutdoorUnitReversingValveStatus(payload.data["ctReversingValve"]),
+                heat_demand_percent=self.__sanitize_int(
+                    payload.data["ctOutdoorHeatRequestedDemand"], self._SENTINEL_UINT8, 0.5
+                ),
+                cool_demand_percent=self.__sanitize_int(
+                    payload.data["ctOutdoorCoolRequestedDemand"], self._SENTINEL_UINT8, 0.5
+                ),
+                fan_demand_percent=self.__sanitize_int(
+                    payload.data["ctOutdoorFanRequestedDemandPercentage"], self._SENTINEL_UINT8, 0.5
+                ),
+                fan_demand_airflow=self.__sanitize_int(
+                    payload.data["ctOutdoorRequestedIndoorAirflow"], self._SENTINEL_UINT16
+                ),
+                dehumidify_demand_percent=self.__sanitize_int(
+                    payload.data["ctOutdoorDeHumidificationRequestedDemand"], self._SENTINEL_UINT8, 0.5
+                ),
+                air_temperature=self.__sanitize_temperature(payload.data["ctOutdoorAirTemperature"]),
+                coil_temperature=self.__sanitize_temperature(payload.data["ctOutdoorCoilTemperature"]),
+                discharge_temperature=self.__sanitize_temperature(payload.data["ctOutdoorDischargeTemperature"]),
+                liquid_temperature=self.__sanitize_temperature(payload.data["ctOutdoorLiquidTemperature"]),
+                defrost_sensor_temperature=self.__sanitize_temperature(
+                    payload.data["ctOutdoorDefrostSensorTemperature"]
+                ),
+                inverter_fin_temperature=self.__sanitize_temperature(
+                    payload.data["ctInverterFinTemp"], from_fahrenheit=False, sentinel=self._SENTINEL_UINT8, scale=1
+                ),
+                power_usage=self.__sanitize_float(payload.data["ctOutdoorPower"], self._SENTINEL_UINT16, 10),
+                compressor_amps=self.__sanitize_float(payload.data["ctCompressorCurrent"], self._SENTINEL_UINT16, 0.1),
+                inverter_amps=self.__sanitize_float(payload.data["ctInverterCurrent"], self._SENTINEL_UINT8, 0.1),
+                fan_motor_amps=self.__sanitize_float(payload.data["ctODFanMotorCurrent"], self._SENTINEL_UINT8, 0.1),
                 crank_case_heater=DaikinOutdoorUnitHeaterStatus(payload.data["ctCrankCaseHeaterOnOff"]),
                 drain_pan_heater=DaikinOutdoorUnitHeaterStatus(payload.data["ctDrainPanHeaterOnOff"]),
                 preheat_heater=DaikinOutdoorUnitHeaterStatus(payload.data["ctPreHeatOnOff"]),
@@ -488,7 +588,7 @@ class DaikinOne:
         # eev coil
         if payload.data["ctCoilUnitType"] < 255:
             model = "EEV Coil"
-            serial = payload.data["ctCoilSerialNoCharacter1_15"].strip()
+            serial = self.__sanitize_string(payload.data["ctCoilSerialNoCharacter1_15"])
             eid = f"eevcoil-{serial}"
             name = "EEV Coil"
 
@@ -498,11 +598,11 @@ class DaikinOne:
                 name=name,
                 model=model,
                 serial=serial,
-                firmware_version=payload.data["ctCoilControlSoftwareVersion"].strip(),
-                pressure_psi=payload.data["ctEEVCoilPressureSensor"],
-                indoor_superheat_temperature=Temperature.from_fahrenheit(payload.data["ctEEVCoilSuperHeatValue"] / 10),
-                liquid_temperature=Temperature.from_fahrenheit(payload.data["ctEEVCoilSubCoolValue"] / 10),
-                suction_temperature=Temperature.from_fahrenheit(payload.data["ctEEVCoilSuctionTemperature"] / 10),
+                firmware_version=self.__sanitize_string(payload.data["ctCoilControlSoftwareVersion"]),
+                pressure_psi=self.__sanitize_int(payload.data["ctEEVCoilPressureSensor"], self._SENTINEL_INT16),
+                indoor_superheat_temperature=self.__sanitize_temperature(payload.data["ctEEVCoilSuperHeatValue"]),
+                liquid_temperature=self.__sanitize_temperature(payload.data["ctEEVCoilSubCoolValue"]),
+                suction_temperature=self.__sanitize_temperature(payload.data["ctEEVCoilSuctionTemperature"]),
             )
 
         return equipment
