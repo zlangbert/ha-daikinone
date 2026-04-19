@@ -259,17 +259,6 @@ async def async_setup_entry(
                     entities += [
                         DaikinOneEquipmentSensor(
                             description=SensorEntityDescription(
-                                key="mode",
-                                name="Mode",
-                                has_entity_name=True,
-                                device_class=SensorDeviceClass.ENUM,
-                            ),
-                            data=data,
-                            device=equipment,
-                            attribute=lambda e: e.mode,
-                        ),
-                        DaikinOneEquipmentSensor(
-                            description=SensorEntityDescription(
                                 key="airflow",
                                 name="Airflow",
                                 has_entity_name=True,
@@ -363,6 +352,21 @@ async def async_setup_entry(
                     ]
 
                     # optional indoor unit sensors
+                    if equipment.mode is not None:
+                        entities.append(
+                            DaikinOneEquipmentSensor(
+                                description=SensorEntityDescription(
+                                    key="mode",
+                                    name="Mode",
+                                    has_entity_name=True,
+                                    device_class=SensorDeviceClass.ENUM,
+                                ),
+                                data=data,
+                                device=equipment,
+                                attribute=lambda e: e.mode,
+                            )
+                        )
+
                     if equipment.cool_demand_requested_percent is not None:
                         entities.append(
                             DaikinOneEquipmentSensor(
@@ -431,17 +435,6 @@ async def async_setup_entry(
                             data=data,
                             device=equipment,
                             attribute=lambda e: e.total_runtime.total_seconds() if e.total_runtime else None,
-                        ),
-                        DaikinOneEquipmentSensor(
-                            description=SensorEntityDescription(
-                                key="mode",
-                                name="Mode",
-                                has_entity_name=True,
-                                device_class=SensorDeviceClass.ENUM,
-                            ),
-                            data=data,
-                            device=equipment,
-                            attribute=lambda e: e.mode,
                         ),
                         DaikinOneEquipmentSensor(
                             description=SensorEntityDescription(
@@ -734,6 +727,21 @@ async def async_setup_entry(
                     ]
 
                     # optional outdoor unit sensors
+                    if equipment.mode is not None:
+                        entities.append(
+                            DaikinOneEquipmentSensor(
+                                description=SensorEntityDescription(
+                                    key="mode",
+                                    name="Mode",
+                                    has_entity_name=True,
+                                    device_class=SensorDeviceClass.ENUM,
+                                ),
+                                data=data,
+                                device=equipment,
+                                attribute=lambda e: e.mode,
+                            )
+                        )
+
                     if equipment.reversing_valve is not DaikinOutdoorUnitReversingValveStatus.UNKNOWN:
                         entities.append(
                             DaikinOneEquipmentSensor(
