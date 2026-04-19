@@ -9,20 +9,15 @@ on:
       - main
 
 jobs:
-
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
-        with:
-          enable-cache: true
+        uses: astral-sh/setup-uv@v8.1.0
+      - name: Install Task
+        uses: go-task/setup-task@v1
       - name: Sync
-        run: uv sync
-      - name: Type Check
-        run: uv run ty check custom_components
-      - name: Lint
-        run: uv run ruff check .
-      - name: Format Check
-        run: uv run ruff format --check custom_components
+        run: task setup
+      - name: Check
+        run: task check

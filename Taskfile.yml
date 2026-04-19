@@ -1,0 +1,24 @@
+version: "3"
+
+tasks:
+  setup:
+    desc: Install Python dependencies with uv
+    cmds:
+      - uv sync
+
+  dev:
+    desc: Run Home Assistant in Docker with live-reload
+    cmds:
+      - docker compose up --watch
+
+  check:
+    desc: Run type check, lint, and format check
+    cmds:
+      - uv run ty check custom_components
+      - uv run ruff check .
+      - uv run ruff format --check custom_components
+
+  release:
+    desc: "Cut a release (usage: task release -- 0.9.7)"
+    cmds:
+      - ./dev/release.sh {{.CLI_ARGS}}
