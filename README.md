@@ -16,6 +16,8 @@ A custom component for Home Assistant to integrate with Daikin One+ smart HVAC s
   - [Installation](#installation)
     - [Install via HACS](#install-via-hacs)
     - [Manual Install](#manual-install)
+  - [Tips](#tips)
+    - [Exposing climate attributes as sensors](#exposing-climate-attributes-as-sensors)
 
 ## Features
 
@@ -90,3 +92,22 @@ _A manual installation is more risky than installation via HACS. You must be fam
 4. Click the below button to add the integration and start setup
 
 [![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=daikinone)
+
+## Tips
+
+### Exposing climate attributes as sensors
+
+Some values, such as the thermostat's target temperature (setpoint), are exposed as attributes of the `climate` entity rather than as standalone sensor entities. If you want to graph, automate on, or otherwise reference these values directly, you can create a [template sensor](https://www.home-assistant.io/integrations/template/) via **Settings → Devices & services → Helpers → Create helper → Template → Template a sensor**.
+
+Useful `climate` entity attributes include:
+
+- `temperature` — target temperature when the thermostat is in a single-setpoint mode (heat or cool)
+- `target_temp_low` / `target_temp_high` — low and high setpoints when the thermostat is in heat/cool (auto) mode
+- `current_temperature` — current temperature reported by the thermostat
+- `current_humidity` — current humidity reported by the thermostat
+
+For example, to track the current setpoint, use the following state template (replacing the entity ID with your own):
+
+```jinja
+{{ state_attr('climate.main_room_thermostat', 'temperature') }}
+```
