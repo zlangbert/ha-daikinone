@@ -115,6 +115,18 @@ class CelsiusField:
     max_c: float = 80
 
 
+@dataclass(frozen=True, slots=True)
+class UnitTypeField:
+    """Equipment unit-type presence flag.
+
+    Reads as True when the ``ct*UnitType`` key is present and not the U8 sentinel.
+    P1/P2 mini-split payloads omit these keys entirely, so a missing key also reads
+    as False (equipment not present).
+    """
+
+    key: str
+
+
 # --- Reader ---
 
 
@@ -132,9 +144,13 @@ def read(data: dict[str, Any], f: StringField) -> str | None: ...
 def read(data: dict[str, Any], f: PercentField) -> int | None: ...
 @overload
 def read(data: dict[str, Any], f: CelsiusField) -> Temperature | None: ...
+@overload
+def read(data: dict[str, Any], f: UnitTypeField) -> bool: ...
 
 
 def read(data: dict[str, Any], f: Any) -> Any:
+    if isinstance(f, UnitTypeField):
+        return data.get(f.key, Sentinel.U8) < Sentinel.U8
     value = data[f.key]
     if isinstance(f, IntField):
         return None if value == f.sentinel else round(value * f.scale)

@@ -108,7 +108,7 @@ def map_equipment(payload: DaikinDeviceDataResponse) -> dict[str, DaikinEquipmen
 
 
 def _map_air_handler(payload: DaikinDeviceDataResponse) -> DaikinIndoorUnit | None:
-    if payload.data["ctAHUnitType"] >= 255:
+    if not read(payload.data, f.F_AH_UNIT_TYPE):
         return None
 
     model = read(payload.data, f.F_AH_MODEL)
@@ -143,7 +143,7 @@ def _map_air_handler(payload: DaikinDeviceDataResponse) -> DaikinIndoorUnit | No
 
 
 def _map_furnace(payload: DaikinDeviceDataResponse) -> DaikinIndoorUnit | None:
-    if payload.data["ctIFCUnitType"] >= 255:
+    if not read(payload.data, f.F_IFC_UNIT_TYPE):
         return None
 
     model = read(payload.data, f.F_IFC_MODEL)
@@ -178,7 +178,7 @@ def _map_furnace(payload: DaikinDeviceDataResponse) -> DaikinIndoorUnit | None:
 
 
 def _map_outdoor_unit(payload: DaikinDeviceDataResponse) -> DaikinOutdoorUnit | None:
-    if payload.data["ctOutdoorUnitType"] >= 255:
+    if not read(payload.data, f.F_OD_UNIT_TYPE):
         return None
 
     model = read(payload.data, f.F_OD_MODEL)
@@ -234,7 +234,7 @@ def _map_outdoor_unit(payload: DaikinDeviceDataResponse) -> DaikinOutdoorUnit | 
 
 
 def _map_eev_coil(payload: DaikinDeviceDataResponse) -> DaikinEEVCoil | None:
-    if payload.data["ctCoilUnitType"] >= 255:
+    if not read(payload.data, f.F_COIL_UNIT_TYPE):
         return None
 
     serial = read(payload.data, f.F_EEV_SERIAL)

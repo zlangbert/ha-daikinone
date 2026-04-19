@@ -14,6 +14,7 @@ from custom_components.daikinone.client.wire import (
     Sentinel,
     StringField,
     TempField,
+    UnitTypeField,
 )
 
 
@@ -33,6 +34,8 @@ F_HUM_OUTDOOR = PercentField("humOutdoor")
 
 # --- Air handler field catalog ---
 
+F_AH_UNIT_TYPE = UnitTypeField("ctAHUnitType")
+
 # percent demands: uint8 encoded with 0.5 resolution
 F_AH_FAN_REQ_DEMAND = IntField("ctAHFanRequestedDemand", Sentinel.U8, 0.5)
 F_AH_FAN_CUR_DEMAND = IntField("ctAHFanCurrentDemandStatus", Sentinel.U8, 0.5)
@@ -49,6 +52,8 @@ F_AH_MODE = StringField("ctAHMode")
 
 
 # --- Furnace (IFC) field catalog ---
+
+F_IFC_UNIT_TYPE = UnitTypeField("ctIFCUnitType")
 
 F_IFC_FAN_REQ_DEMAND = IntField("ctIFCFanRequestedDemandPercent", Sentinel.U8, 0.5)
 F_IFC_FAN_CUR_DEMAND = IntField("ctIFCCurrentFanActualStatus", Sentinel.U8, 0.5)
@@ -74,6 +79,8 @@ F_INDOOR_POWER = FloatField("ctIndoorPower", Sentinel.U16, 0.1)
 
 
 # --- Outdoor unit field catalog ---
+
+F_OD_UNIT_TYPE = UnitTypeField("ctOutdoorUnitType")
 
 F_OD_MODEL = StringField("ctOutdoorModelNoCharacter1_15")
 F_OD_SERIAL = StringField("ctOutdoorSerialNoCharacter1_15")
@@ -115,6 +122,8 @@ F_OD_FAN_MOTOR_AMPS = FloatField("ctODFanMotorCurrent", Sentinel.U8, 0.1)
 
 
 # --- EEV coil field catalog ---
+
+F_COIL_UNIT_TYPE = UnitTypeField("ctCoilUnitType")
 
 F_EEV_SERIAL = StringField("ctCoilSerialNoCharacter1_15")
 F_EEV_FIRMWARE = StringField("ctCoilControlSoftwareVersion")
