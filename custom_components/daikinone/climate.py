@@ -169,13 +169,11 @@ class DaikinOneThermostat(DaikinOneEntity[DaikinThermostat], ClimateEntity):
     async def async_set_preset_mode(self, preset_mode: str):
         """Set new target preset mode."""
         match preset_mode:
-
             case DaikinOneThermostatPresetMode.EMERGENCY_HEAT.value:
                 await self.set_thermostat_mode(DaikinThermostatMode.AUX_HEAT)
 
             case DaikinOneThermostatPresetMode.NONE.value:
                 match self._device.mode:
-
                     # turning off emergency heat should set the thermostat mode to heat
                     case DaikinThermostatMode.AUX_HEAT:
                         await self.set_thermostat_mode(DaikinThermostatMode.HEAT)
