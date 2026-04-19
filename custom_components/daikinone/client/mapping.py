@@ -31,11 +31,11 @@ log = logging.getLogger(__name__)
 
 def map_thermostat(payload: DaikinDeviceDataResponse) -> DaikinThermostat:
     capabilities: set[DaikinThermostatCapability] = set()
-    if payload.data["ctSystemCapHeat"]:
+    if payload.data.get("ctSystemCapHeat"):
         capabilities.add(DaikinThermostatCapability.HEAT)
-    if payload.data["ctSystemCapCool"]:
+    if payload.data.get("ctSystemCapCool"):
         capabilities.add(DaikinThermostatCapability.COOL)
-    if payload.data["ctSystemCapEmergencyHeat"]:
+    if payload.data.get("ctSystemCapEmergencyHeat"):
         capabilities.add(DaikinThermostatCapability.EMERGENCY_HEAT)
 
     return DaikinThermostat(

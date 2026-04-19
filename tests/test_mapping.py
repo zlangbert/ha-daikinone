@@ -334,6 +334,26 @@ class TestEquipmentUnitTypeAbsent:
         assert not any(isinstance(e, DaikinEEVCoil) for e in thermostat.equipment.values())
 
 
+class TestThermostatCapabilitiesAbsent:
+    """Some thermostat payloads omit the ``ctSystemCap*`` flags entirely; mapping
+    must treat missing keys as 'capability not advertised' rather than KeyError-ing
+    on setup."""
+
+    async def test_no_capabilities_when_cap_keys_missing(
+        self, daikin_client: DaikinOne
+    ) -> None:
+        device_data = _make_device()
+        for key in ("ctSystemCapHeat", "ctSystemCapCool", "ctSystemCapEmergencyHeat"):
+            del device_data["data"][key]
+
+        with patch.object(daikin_client._transport, "request", new_callable=AsyncMock) as mock_req:
+            mock_req.return_value = [device_data]
+            await daikin_client.update()
+
+        thermostat = daikin_client.get_thermostats()["device123"]
+        assert thermostat.capabilities == set()
+
+
 class TestOutdoorUnitName:
     async def test_heat_pump_when_max_rps_positive(self, daikin_client: DaikinOne) -> None:
         device_data = _make_device({**OUTDOOR_UNIT_DATA, "ctOutdoorHeatMaxRPS": 100})
