@@ -20,7 +20,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from custom_components.daikinone import DaikinOneData, DOMAIN
 from custom_components.daikinone.entity import DaikinOneEntity
-from custom_components.daikinone.daikinone import (
+from custom_components.daikinone.client.models import (
     DaikinThermostat,
     DaikinThermostatCapability,
     DaikinThermostatMode,
@@ -169,13 +169,11 @@ class DaikinOneThermostat(DaikinOneEntity[DaikinThermostat], ClimateEntity):
     async def async_set_preset_mode(self, preset_mode: str):
         """Set new target preset mode."""
         match preset_mode:
-
             case DaikinOneThermostatPresetMode.EMERGENCY_HEAT.value:
                 await self.set_thermostat_mode(DaikinThermostatMode.AUX_HEAT)
 
             case DaikinOneThermostatPresetMode.NONE.value:
                 match self._device.mode:
-
                     # turning off emergency heat should set the thermostat mode to heat
                     case DaikinThermostatMode.AUX_HEAT:
                         await self.set_thermostat_mode(DaikinThermostatMode.HEAT)
@@ -238,6 +236,7 @@ class DaikinOneThermostat(DaikinOneEntity[DaikinThermostat], ClimateEntity):
                         operation=lambda: self._data.daikin.set_thermostat_home_set_points(
                             self._device.id,
                             heat=temperature,
+                            override_schedule=self._device.schedule.enabled,
                         ),
                         optimistic_update=update,
                         check=lambda t: t.set_point_heat == temperature,
@@ -254,6 +253,7 @@ class DaikinOneThermostat(DaikinOneEntity[DaikinThermostat], ClimateEntity):
                         operation=lambda: self._data.daikin.set_thermostat_home_set_points(
                             self._device.id,
                             cool=temperature,
+                            override_schedule=self._device.schedule.enabled,
                         ),
                         optimistic_update=update,
                         check=lambda t: t.set_point_cool == temperature,
@@ -291,7 +291,9 @@ class DaikinOneThermostat(DaikinOneEntity[DaikinThermostat], ClimateEntity):
 
     def update_entity_attributes(self) -> None:
         self._attr_available = self._device.online
-        self._attr_current_temperature = self._device.indoor_temperature.celsius
+        self._attr_current_temperature = (
+            self._device.indoor_temperature.celsius if self._device.indoor_temperature else None
+        )
         self._attr_current_humidity = self._device.indoor_humidity
 
         # hvac current mode and preset
@@ -331,26 +333,35 @@ class DaikinOneThermostat(DaikinOneEntity[DaikinThermostat], ClimateEntity):
 
         match self._device.mode:
             case DaikinThermostatMode.HEAT | DaikinThermostatMode.AUX_HEAT:
-                self._attr_target_temperature = self._device.set_point_heat.celsius
+                self._attr_target_temperature = (
+                    self._device.set_point_heat.celsius if self._device.set_point_heat else None
+                )
             case DaikinThermostatMode.COOL:
-                self._attr_target_temperature = self._device.set_point_cool.celsius
+                self._attr_target_temperature = (
+                    self._device.set_point_cool.celsius if self._device.set_point_cool else None
+                )
             case DaikinThermostatMode.AUTO:
-                self._attr_target_temperature_low = self._device.set_point_heat.celsius
-                self._attr_target_temperature_high = self._device.set_point_cool.celsius
+                self._attr_target_temperature_low = (
+                    self._device.set_point_heat.celsius if self._device.set_point_heat else None
+                )
+                self._attr_target_temperature_high = (
+                    self._device.set_point_cool.celsius if self._device.set_point_cool else None
+                )
             case _:
                 pass
 
         # temperature bounds
+        heat_min = self._device.set_point_heat_min.celsius if self._device.set_point_heat_min else None
+        cool_min = self._device.set_point_cool_min.celsius if self._device.set_point_cool_min else None
+        heat_max = self._device.set_point_heat_max.celsius if self._device.set_point_heat_max else None
+        cool_max = self._device.set_point_cool_max.celsius if self._device.set_point_cool_max else None
+
         # these should be the same but just in case, take the larger of the two for the min
-        self._attr_min_temp = max(
-            self._device.set_point_heat_min.celsius,
-            self._device.set_point_cool_min.celsius,
-        )
+        if heat_min is not None and cool_min is not None:
+            self._attr_min_temp = max(heat_min, cool_min)
         # these should be the same but just in case, take the smaller of the two for the max
-        self._attr_max_temp = min(
-            self._device.set_point_heat_max.celsius,
-            self._device.set_point_cool_max.celsius,
-        )
+        if heat_max is not None and cool_max is not None:
+            self._attr_max_temp = min(heat_max, cool_max)
 
         # fan settings
         match self._device.fan_mode:

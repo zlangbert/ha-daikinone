@@ -12,7 +12,8 @@ from custom_components.daikinone.const import (
     DOMAIN,
     MIN_TIME_BETWEEN_UPDATES,
 )
-from custom_components.daikinone.daikinone import DaikinOne, DaikinUserCredentials
+from custom_components.daikinone.client.client import DaikinOne
+from custom_components.daikinone.client.models import DaikinUserCredentials
 
 log = logging.getLogger(__name__)
 
@@ -25,7 +26,7 @@ class DaikinOneData:
 
     async def update(self, no_throttle: bool = False) -> None:
         """Get the latest data from Daikin cloud"""
-        await self._update(no_throttle=no_throttle)  # type: ignore
+        await self._update(no_throttle=no_throttle)
 
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
     async def _update(self) -> None:

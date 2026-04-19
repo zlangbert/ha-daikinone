@@ -5,7 +5,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from custom_components.daikinone import DOMAIN, DaikinOneData
 from custom_components.daikinone.const import CONF_OPTION_ENTITY_UID_SCHEMA_VERSION_KEY
-from custom_components.daikinone.daikinone import DaikinThermostat, DaikinThermostatFanSpeed
+from custom_components.daikinone.client.models import DaikinThermostat, DaikinThermostatFanSpeed
 from custom_components.daikinone.entity import DaikinOneEntity
 from custom_components.daikinone.climate import DaikinOneThermostatFanSpeed
 
@@ -39,7 +39,6 @@ async def async_setup_entry(
 
 
 class DaikinOneFanSpeedSelect(DaikinOneEntity[DaikinThermostat], SelectEntity):
-
     def __init__(self, description: SelectEntityDescription, data: DaikinOneData, thermostat: DaikinThermostat):
         super().__init__(data, thermostat)
 
