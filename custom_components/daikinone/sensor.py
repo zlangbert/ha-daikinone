@@ -92,6 +92,42 @@ async def async_setup_entry(
             ),
         ]
 
+        if thermostat.outdoor_temperature is not None:
+            entities.append(
+                DaikinOneThermostatSensor(
+                    description=SensorEntityDescription(
+                        key="outdoor_temperature",
+                        name="Outdoor Temperature",
+                        has_entity_name=True,
+                        state_class=SensorStateClass.MEASUREMENT,
+                        device_class=SensorDeviceClass.TEMPERATURE,
+                        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+                        icon="mdi:thermometer",
+                    ),
+                    data=data,
+                    device=thermostat,
+                    attribute=lambda d: d.outdoor_temperature.celsius if d.outdoor_temperature else None,
+                )
+            )
+
+        if thermostat.outdoor_humidity is not None:
+            entities.append(
+                DaikinOneThermostatSensor(
+                    description=SensorEntityDescription(
+                        key="outdoor_humidity",
+                        name="Outdoor Humidity",
+                        has_entity_name=True,
+                        state_class=SensorStateClass.MEASUREMENT,
+                        device_class=SensorDeviceClass.HUMIDITY,
+                        native_unit_of_measurement="%",
+                        icon="mdi:water-percent",
+                    ),
+                    data=data,
+                    device=thermostat,
+                    attribute=lambda d: d.outdoor_humidity,
+                )
+            )
+
         if thermostat.air_quality_outdoor is not None:
             entities += [
                 DaikinOneThermostatSensor(
@@ -762,7 +798,7 @@ async def async_setup_entry(
                             DaikinOneEquipmentSensor(
                                 description=SensorEntityDescription(
                                     key="crank_case_heater",
-                                    name="Crrank Case Heater",
+                                    name="Crank Case Heater",
                                     has_entity_name=True,
                                     device_class=SensorDeviceClass.ENUM,
                                 ),
