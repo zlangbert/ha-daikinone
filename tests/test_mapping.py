@@ -491,3 +491,34 @@ class TestEnumSanitization:
             if isinstance(e, DaikinOutdoorUnit)
         )
         assert unit.crank_case_heater is DaikinOutdoorUnitHeaterStatus.UNKNOWN
+
+
+class TestOneCleanFan:
+    """oneCleanFanActive maps to the thermostat's One Clean state; payloads that
+    don't report the feature (e.g. P1/P2 mini-splits) map to None so the switch
+    entity is not created."""
+
+    async def _thermostat(self, daikin_client: DaikinOne, device_data: dict[str, Any]):
+        with patch.object(daikin_client._transport, "request", new_callable=AsyncMock) as mock_req:
+            mock_req.return_value = [device_data]
+            await daikin_client.update()
+
+        return daikin_client.get_thermostats()["device123"]
+
+    async def test_inactive_state_mapped(self, daikin_client: DaikinOne) -> None:
+        device_data = _make_device()
+        device_data["data"]["oneCleanFanActive"] = False
+
+        thermostat = await self._thermostat(daikin_client, device_data)
+        assert thermostat.one_clean_fan_active is False
+
+    async def test_active_state_mapped(self, daikin_client: DaikinOne) -> None:
+        device_data = _make_device()
+        device_data["data"]["oneCleanFanActive"] = True
+
+        thermostat = await self._thermostat(daikin_client, device_data)
+        assert thermostat.one_clean_fan_active is True
+
+    async def test_missing_key_maps_to_none(self, daikin_client: DaikinOne) -> None:
+        thermostat = await self._thermostat(daikin_client, _make_device())
+        assert thermostat.one_clean_fan_active is None

@@ -107,3 +107,11 @@ class DaikinOne:
             method="PUT",
             body={"fanCirculateSpeed": fan_speed.value},
         )
+
+    async def set_one_clean_fan_active(self, thermostat_id: str, active: bool) -> None:
+        """Start or stop the One Clean fan cycle"""
+        await self._transport.request(
+            url=f"{DAIKIN_API_URL_DEVICE_DATA}/{thermostat_id}",
+            method="PUT",
+            body={"oneCleanFanActive": active},
+        )

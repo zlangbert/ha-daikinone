@@ -63,6 +63,7 @@ def map_thermostat(payload: DaikinDeviceDataResponse) -> DaikinThermostat:
         outdoor_humidity=read(payload.data, f.F_HUM_OUTDOOR),
         air_quality_outdoor=map_air_quality_outdoor(payload),
         air_quality_indoor=map_air_quality_indoor(payload),
+        one_clean_fan_active=payload.data.get("oneCleanFanActive"),
         equipment=map_equipment(payload),
     )
 

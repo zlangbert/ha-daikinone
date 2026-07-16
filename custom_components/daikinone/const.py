@@ -11,6 +11,7 @@ PLATFORMS = [
     Platform.CLIMATE,
     Platform.SELECT,
     Platform.SENSOR,
+    Platform.SWITCH,
 ]
 
 MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=30)
