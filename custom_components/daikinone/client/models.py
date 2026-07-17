@@ -106,6 +106,7 @@ class DaikinOneAirQualitySensorSummaryLevel(Enum):
     UNHEALTHY = 2
     # The app shows 3 as "Unhealthy" but with a red color instead of orange, so we will call it "Hazardous"
     HAZARDOUS = 3
+    VERY_UNHEALTHY = 4
 
 
 @dataclass
