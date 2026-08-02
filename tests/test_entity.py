@@ -7,8 +7,9 @@ from homeassistant.components.sensor import SensorEntityDescription
 
 from custom_components.daikinone import DaikinOneData
 from custom_components.daikinone.client.client import DaikinOne
-from custom_components.daikinone.client.models import DaikinIndoorUnit, DaikinUserCredentials
+from custom_components.daikinone.client.models import DaikinIndoorUnit, DaikinThermostat, DaikinUserCredentials
 from custom_components.daikinone.const import CONF_OPTION_ENTITY_UID_SCHEMA_VERSION_KEY
+from custom_components.daikinone.entity import DaikinOneEntity
 from custom_components.daikinone.sensor import DaikinOneEquipmentSensor, DaikinOneThermostatSensor
 from tests.test_mapping import AIR_HANDLER_DATA, _make_device
 
@@ -103,3 +104,63 @@ class TestEntityAvailability:
 
         assert sensor.available is True
         assert sensor.native_value == 45
+
+
+class _StubEntity(DaikinOneEntity[DaikinThermostat]):
+    async def async_get_device(self) -> DaikinThermostat:
+        return self._device
+
+    def update_entity_attributes(self) -> None:
+        pass
+
+
+class TestUpdateStateOptimistically:
+    async def test_updates_paused_reset_after_operation_error(
+        self, daikin_client: DaikinOne, data: DaikinOneData
+    ) -> None:
+        """Regression test: a failed operation must not permanently freeze the entity."""
+        with patch.object(daikin_client._transport, "request", new_callable=AsyncMock) as mock_req:
+            await _refresh(daikin_client, mock_req, _make_device(AIR_HANDLER_DATA))
+        thermostat = daikin_client.get_thermostats()["device123"]
+
+        entity = _StubEntity(data=data, device=thermostat)
+
+        async def failing_operation() -> None:
+            raise RuntimeError("boom")
+
+        with pytest.raises(RuntimeError):
+            await entity.update_state_optimistically(
+                operation=failing_operation,
+                optimistic_update=lambda d: None,
+                check=lambda d: True,
+            )
+
+        assert entity._updates_paused is False
+
+    async def test_updates_resume_after_wait_for_updated_value_error(
+        self, daikin_client: DaikinOne, data: DaikinOneData
+    ) -> None:
+        """Regression test: a failed post-operation poll must not permanently freeze the entity."""
+        with patch.object(daikin_client._transport, "request", new_callable=AsyncMock) as mock_req:
+            await _refresh(daikin_client, mock_req, _make_device(AIR_HANDLER_DATA))
+        thermostat = daikin_client.get_thermostats()["device123"]
+
+        entity = _StubEntity(data=data, device=thermostat)
+        entity.hass = None  # type: ignore[assignment]
+        entity.entity_id = "climate.test"
+        entity.async_write_ha_state = lambda: None  # type: ignore[method-assign]
+
+        def check(_: DaikinThermostat) -> bool:
+            raise RuntimeError("device disappeared mid-poll")
+
+        with patch.object(daikin_client._transport, "request", new_callable=AsyncMock) as mock_req:
+            mock_req.return_value = [_make_device(AIR_HANDLER_DATA)]
+
+            with pytest.raises(RuntimeError):
+                await entity.update_state_optimistically(
+                    operation=AsyncMock(),
+                    optimistic_update=lambda d: None,
+                    check=check,
+                )
+
+        assert entity._updates_paused is False

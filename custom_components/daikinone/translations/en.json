@@ -8,10 +8,19 @@
           "email": "Email",
           "password": "Password"
         }
+      },
+      "reauth_confirm": {
+        "title": "Reauthenticate Daikin One",
+        "description": "Your Daikin One credentials are no longer valid. Please re-enter them.",
+        "data": {
+          "email": "Email",
+          "password": "Password"
+        }
       }
     },
     "error": {
-      "auth_failed": "Authentication failed, please check your credentials and try again. Check the logs for more info."
+      "auth_failed": "Authentication failed, please check your credentials and try again. Check the logs for more info.",
+      "cannot_connect": "Unable to connect to the Daikin cloud API. Check the logs for more info and try again later."
     }
   },
   "entity": {
