@@ -103,9 +103,10 @@ class DaikinOutdoorUnit(DaikinEquipment):
 class DaikinOneAirQualitySensorSummaryLevel(Enum):
     GOOD = 0
     MODERATE = 1
-    UNHEALTHY = 2
-    # The app shows 3 as "Unhealthy" but with a red color instead of orange, so we will call it "Hazardous"
-    HAZARDOUS = 3
+    UNHEALTHYSENSITIVE = 2
+    UNHEALTHY = 3
+    VERYUNHEALTHY = 4
+    HAZARDOUS = 5
 
 
 @dataclass
@@ -205,6 +206,7 @@ class DaikinThermostat(DaikinDevice):
     fan_mode: DaikinThermostatFanMode
     fan_speed: DaikinThermostatFanSpeed
     schedule: DaikinThermostatSchedule
+    away_mode: bool
     indoor_temperature: Temperature | None
     indoor_humidity: int | None
     set_point_heat: Temperature | None

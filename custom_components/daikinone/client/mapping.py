@@ -51,6 +51,7 @@ def map_thermostat(payload: DaikinDeviceDataResponse) -> DaikinThermostat:
         fan_mode=DaikinThermostatFanMode(payload.data["fanCirculate"]),
         fan_speed=DaikinThermostatFanSpeed(payload.data["fanCirculateSpeed"]),
         schedule=DaikinThermostatSchedule(enabled=payload.data["schedEnabled"]),
+        away_mode=bool(payload.data.get("geofencingAway", False)),
         indoor_temperature=read(payload.data, f.F_TEMP_INDOOR),
         indoor_humidity=read(payload.data, f.F_HUM_INDOOR),
         set_point_heat=read(payload.data, f.F_SETPOINT_HEAT),
