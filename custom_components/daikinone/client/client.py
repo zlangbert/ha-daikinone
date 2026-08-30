@@ -49,7 +49,12 @@ class DaikinOne:
             if not r.online and len(r.data) == 0:
                 log.warning(f"Skipping offline device with no data: {r.name} ({r.id})")
                 continue
-            self.__thermostats[r.id] = map_thermostat(r)
+            try:
+                self.__thermostats[r.id] = map_thermostat(r)
+            except:
+                log.warning(f"Skipping unsupported device: {r.name} ({r.id})")
+                continue
+
 
         log.info(f"Cached {len(self.__thermostats)} thermostats")
 
