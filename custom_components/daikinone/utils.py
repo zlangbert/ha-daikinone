@@ -49,3 +49,5 @@ class Temperature(BaseModel):
 
     def __str__(self) -> str:
         return f"{self.celsius}°C"
+    
+    __repr__ = __str__

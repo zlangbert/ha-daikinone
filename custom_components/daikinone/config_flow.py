@@ -16,7 +16,7 @@ class DaikinOneConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Daikin One config flow."""
 
     VERSION = 1
-    MINOR_VERSION = 2
+    MINOR_VERSION = 3
 
     @property
     def schema(self):

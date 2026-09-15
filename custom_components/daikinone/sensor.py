@@ -30,6 +30,7 @@ from custom_components.daikinone.client.models import (
     DaikinIndoorUnit,
     DaikinEquipment,
     DaikinOutdoorUnit,
+    DaikinSplitUnit,
 )
 
 log = logging.getLogger(__name__)
@@ -900,10 +901,97 @@ async def async_setup_entry(
                         ),
                     ]
 
+                case DaikinSplitUnit():
+                    entities += _split_unit_sensors(data, equipment)
+                    if equipment.recent_fault is not None:
+                        entities.append(DaikinOneSplitFaultSensor(data, equipment))
+
                 case _:
                     log.warning(f"unexpected equipment: {equipment}")
 
     async_add_entities(entities, True)
+
+
+def _split_unit_sensors(data: DaikinOneData, unit: DaikinSplitUnit) -> list[SensorEntity]:
+    """Build P1/P2 entities while preserving unavailable telemetry as None."""
+
+    def sensor(
+        key: str,
+        name: str,
+        attribute: Callable[[DaikinSplitUnit], StateType],
+        *,
+        device_class: SensorDeviceClass | None = None,
+        unit_of_measurement: str | None = None,
+        state_class: SensorStateClass | None = None,
+        entity_category: EntityCategory | None = None,
+        icon: str | None = None,
+    ) -> DaikinOneEquipmentSensor[DaikinSplitUnit]:
+        return DaikinOneEquipmentSensor(
+            description=SensorEntityDescription(
+                key=key,
+                name=name,
+                has_entity_name=True,
+                device_class=device_class,
+                native_unit_of_measurement=unit_of_measurement,
+                state_class=state_class,
+                entity_category=entity_category,
+                icon=icon,
+            ),
+            data=data,
+            device=unit,
+            attribute=attribute,
+        )
+
+    temperature = SensorDeviceClass.TEMPERATURE
+    measurement = SensorStateClass.MEASUREMENT
+    total = SensorStateClass.TOTAL_INCREASING
+    diagnostic = EntityCategory.DIAGNOSTIC
+    return [
+        sensor("mode", "Operation Mode", lambda e: e.mode.name.replace("_", " ").title(), device_class=SensorDeviceClass.ENUM),
+        sensor(
+            "equipment_status",
+            "Equipment Status",
+            lambda e: e.equipment_status.name.replace("_", " ").title(),
+            device_class=SensorDeviceClass.ENUM,
+        ),
+        sensor("indoor_temperature", "Indoor Temperature", lambda e: e.indoor_temperature.celsius if e.indoor_temperature else None, device_class=temperature, unit_of_measurement=UnitOfTemperature.CELSIUS, state_class=measurement),
+        sensor("indoor_humidity", "Indoor Humidity", lambda e: e.indoor_humidity, device_class=SensorDeviceClass.HUMIDITY, unit_of_measurement=PERCENTAGE, state_class=measurement),
+        sensor("set_point_heat", "Heat Setpoint", lambda e: e.set_point_heat.celsius if e.set_point_heat else None, device_class=temperature, unit_of_measurement=UnitOfTemperature.CELSIUS, state_class=measurement),
+        sensor("set_point_cool", "Cool Setpoint", lambda e: e.set_point_cool.celsius if e.set_point_cool else None, device_class=temperature, unit_of_measurement=UnitOfTemperature.CELSIUS, state_class=measurement),
+        # The One+ P1/P2 status screen defines this value as indoor-fan RPM.
+        # The legacy integration incorrectly exposed it as a percentage, which
+        # makes Home Assistant reject valid values above 100 (e.g. 109 RPM).
+        sensor(
+            "fan_speed_rpm",
+            "Fan Speed",
+            lambda e: e.fan_speed_code,
+            unit_of_measurement="rpm",
+            state_class=measurement,
+        ),
+        # This is the P1/P2 louvre-setting register, not a percentage.  Its
+        # model-specific encoding is not documented by Daikin's cloud API.
+        sensor("louvre_setting", "Louvre Setting", lambda e: e.flap_swing_code, state_class=measurement),
+        sensor("suction_temperature", "Suction Temperature", lambda e: e.suction_temperature.celsius if e.suction_temperature else None, device_class=temperature, unit_of_measurement=UnitOfTemperature.CELSIUS, state_class=measurement),
+        sensor("discharge_temperature", "Discharge Temperature", lambda e: e.discharge_temperature.celsius if e.discharge_temperature else None, device_class=temperature, unit_of_measurement=UnitOfTemperature.CELSIUS, state_class=measurement),
+        sensor("operating_time", "Operating Time", lambda e: e.operating_time, unit_of_measurement=UnitOfTime.MINUTES, state_class=total),
+        sensor("energized_time", "Energized Time", lambda e: e.energized_time, unit_of_measurement=UnitOfTime.MINUTES, state_class=total),
+        sensor("fan_operation_time", "Fan Operation Time", lambda e: e.fan_operation_time, unit_of_measurement=UnitOfTime.MINUTES, state_class=total),
+        sensor("eev_open_pulses", "EEV Open Pulses", lambda e: e.eev_open_pulses, unit_of_measurement="pulses", state_class=measurement),
+        sensor("gas_pipe_temp", "Gas Pipe Temperature", lambda e: e.gas_pipe_temp.celsius if e.gas_pipe_temp else None, device_class=temperature, unit_of_measurement=UnitOfTemperature.CELSIUS, state_class=measurement),
+        sensor("heat_exchanger_temp", "Heat Exchanger Temperature", lambda e: e.heat_exchanger_temp.celsius if e.heat_exchanger_temp else None, device_class=temperature, unit_of_measurement=UnitOfTemperature.CELSIUS, state_class=measurement),
+        sensor("fan_tap_active", "Fan Tap Active", lambda e: e.fan_tap_active, device_class=SensorDeviceClass.ENUM),
+        sensor("humidifier_on", "Humidifier On", lambda e: e.humidifier_on, device_class=SensorDeviceClass.ENUM),
+        sensor("dehumidifier_on", "Dehumidifier On", lambda e: e.dehumidifier_on, device_class=SensorDeviceClass.ENUM),
+        sensor("drain_pump", "Drain Pump", lambda e: _on_off(e.drain_pump_on), device_class=SensorDeviceClass.ENUM, entity_category=diagnostic),
+        sensor("float_switch", "Float Switch", lambda e: _on_off(e.float_switch_on), device_class=SensorDeviceClass.ENUM, entity_category=diagnostic),
+        sensor("anti_freeze", "Anti-freeze Control", lambda e: _on_off(e.anti_freeze_on), device_class=SensorDeviceClass.ENUM, entity_category=diagnostic),
+        sensor("electric_heater", "Electric Heater", lambda e: _on_off(e.electric_heater_on), device_class=SensorDeviceClass.ENUM, entity_category=diagnostic),
+        sensor("humidifier_control", "Humidifier Control", lambda e: _on_off(e.humidifier_control_on), device_class=SensorDeviceClass.ENUM, entity_category=diagnostic),
+    ]
+
+
+def _on_off(value: bool | None) -> str | None:
+    return None if value is None else "On" if value else "Off"
 
 
 class DaikinOneSensor[D: DaikinDevice](DaikinOneEntity[D], SensorEntity):
@@ -963,3 +1051,29 @@ class DaikinOneEquipmentSensor[E: DaikinEquipment](DaikinOneSensor[E]):
 
     def update_entity_attributes(self) -> None:
         self._attr_native_value = self._attribute(self._device)
+
+
+class DaikinOneSplitFaultSensor(DaikinOneEquipmentSensor[DaikinSplitUnit]):
+    """Expose the latest valid historical fault with its date and severity."""
+
+    def __init__(self, data: DaikinOneData, device: DaikinSplitUnit) -> None:
+        super().__init__(
+            description=SensorEntityDescription(
+                key="recent_fault",
+                name="Recent Fault",
+                has_entity_name=True,
+                device_class=SensorDeviceClass.ENUM,
+                entity_category=EntityCategory.DIAGNOSTIC,
+                icon="mdi:alert-circle-outline",
+            ),
+            data=data,
+            device=device,
+            attribute=lambda e: f"Code {e.recent_fault.code}" if e.recent_fault else None,
+        )
+
+    def update_entity_attributes(self) -> None:
+        super().update_entity_attributes()
+        fault = self._device.recent_fault
+        self._attr_extra_state_attributes = (
+            {"occurred_at": fault.occurred_at.isoformat(), "level": fault.level} if fault else None
+        )

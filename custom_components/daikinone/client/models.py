@@ -1,6 +1,6 @@
 """Domain models exposed by the Daikin client to the rest of the integration."""
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 from enum import Enum, auto
 
 from pydantic.dataclasses import dataclass
@@ -134,6 +134,46 @@ class DaikinEEVCoil(DaikinEquipment):
     liquid_temperature: Temperature | None
     suction_temperature: Temperature | None
     pressure_psi: int | None
+
+
+@dataclass
+class DaikinSplitUnit(DaikinEquipment):
+    """P1/P2 or S21 mini-/multi-split indoor unit telemetry."""
+
+    mode: "DaikinThermostatMode"
+    equipment_status: "DaikinThermostatStatus"
+    indoor_temperature: Temperature | None
+    indoor_humidity: int | None
+    set_point_heat: Temperature | None
+    set_point_cool: Temperature | None
+    fan_speed_code: int | None
+    flap_swing_code: int | None
+    suction_temperature: Temperature | None
+    discharge_temperature: Temperature | None
+    operating_time: int | None
+    energized_time: int | None
+    fan_operation_time: int | None
+    eev_open_pulses: int | None
+    gas_pipe_temp: Temperature | None
+    heat_exchanger_temp: Temperature | None
+    fan_tap_active: bool | None
+    humidifier_on: bool | None
+    dehumidifier_on: bool | None
+    drain_pump_on: bool | None
+    float_switch_on: bool | None
+    anti_freeze_on: bool | None
+    electric_heater_on: bool | None
+    humidifier_control_on: bool | None
+    recent_fault: "DaikinFault | None"
+
+
+@dataclass
+class DaikinFault:
+    """A recent fault record reported in the thermostat's history."""
+
+    code: int
+    occurred_at: datetime
+    level: int | None
 
 
 class DaikinThermostatCapability(Enum):

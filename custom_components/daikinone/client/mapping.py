@@ -1,10 +1,12 @@
 """Pure functions that turn a Daikin device-data payload into domain models."""
 
 import logging
+from datetime import UTC, datetime
 
 from custom_components.daikinone.client import fields as f
 from custom_components.daikinone.client.models import (
     DaikinEEVCoil,
+    DaikinFault,
     DaikinEquipment,
     DaikinIndoorUnit,
     DaikinOneAirQualitySensorIndoor,
@@ -12,6 +14,7 @@ from custom_components.daikinone.client.models import (
     DaikinOutdoorUnit,
     DaikinOutdoorUnitHeaterStatus,
     DaikinOutdoorUnitReversingValveStatus,
+    DaikinSplitUnit,
     DaikinThermostat,
     DaikinThermostatCapability,
     DaikinThermostatFanMode,
@@ -103,6 +106,7 @@ def map_equipment(payload: DaikinDeviceDataResponse) -> dict[str, DaikinEquipmen
         _map_furnace(payload),
         _map_outdoor_unit(payload),
         _map_eev_coil(payload),
+        _map_p1p2_split_unit(payload),
     ]
     return {u.id: u for u in units if u is not None}
 
@@ -258,3 +262,92 @@ def _map_eev_coil(payload: DaikinDeviceDataResponse) -> DaikinEEVCoil | None:
         liquid_temperature=read(payload.data, f.F_EEV_SUBCOOL_TEMP),
         suction_temperature=read(payload.data, f.F_EEV_SUCTION_TEMP),
     )
+
+
+def _map_p1p2_split_unit(payload: DaikinDeviceDataResponse) -> DaikinSplitUnit | None:
+    if not read(payload.data, f.F_P1P2_UNIT_TYPE):
+        return None
+
+    model = read(payload.data, f.F_P1P2_MODEL)
+    serial = read(payload.data, f.F_P1P2_SERIAL)
+    if not model or not serial:
+        log.warning("Skipping P1/P2 indoor unit for thermostat %s: model or serial unavailable", payload.id)
+        return None
+
+    def optional_bool(field: object) -> bool | None:
+        value = read(payload.data, field)
+        return None if value is None else bool(value)
+
+    def read_when_valid(field: object, valid_key: str) -> object | None:
+        """P1/P2 publishes a separate validity bit for its live telemetry."""
+        return read(payload.data, field) if payload.data.get(valid_key) is True else None
+
+    def bool_when_valid(field: object, valid_key: str) -> bool | None:
+        value = read_when_valid(field, valid_key)
+        return None if value is None else bool(value)
+
+    return DaikinSplitUnit(
+        id=f"{model}-{serial}",
+        thermostat_id=payload.id,
+        name="Split/Multi-Split Indoor Unit",
+        model=model,
+        serial=serial,
+        firmware_version=payload.firmware.strip(),
+        mode=DaikinThermostatMode(read(payload.data, f.F_P1P2_MODE)),
+        # The P1/P2-specific status is stale at 1 (cooling) on idle units in
+        # real device responses. The top-level status follows the actual HVAC
+        # state and is the status documented by Daikin's public API.
+        equipment_status=DaikinThermostatStatus(payload.data["equipmentStatus"]),
+        indoor_temperature=read(payload.data, f.F_P1P2_INDOOR_TEMP),
+        indoor_humidity=read(payload.data, f.F_P1P2_INDOOR_HUMIDITY),
+        set_point_heat=read(payload.data, f.F_P1P2_HEAT_SETPOINT) or read(payload.data, f.F_SETPOINT_HEAT),
+        set_point_cool=read(payload.data, f.F_P1P2_COOL_SETPOINT) or read(payload.data, f.F_SETPOINT_COOL),
+        fan_speed_code=read_when_valid(f.F_P1P2_FAN_SPEED, "P1P2IndoorUnitFanSpeedValid"),
+        flap_swing_code=read_when_valid(f.F_P1P2_FLAP_SWING, "P1P2IndoorUnitFlapSwingValid"),
+        suction_temperature=read_when_valid(f.F_P1P2_SUCTION_TEMP, "P1P2IndoorSuctionAirThermistorValid"),
+        discharge_temperature=read_when_valid(
+            f.F_P1P2_DISCHARGE_TEMP, "P1P2IndoorUnitDischargeAirThermistorValid"
+        ),
+        operating_time=read_when_valid(f.F_P1P2_OPERATING_TIME, "P1P2IndoorUnitOperatingTimeValid"),
+        energized_time=read_when_valid(f.F_P1P2_ENERGIZED_TIME, "P1P2IndoorUnitEnergizedTimeValid"),
+        fan_operation_time=read_when_valid(f.F_P1P2_FAN_OPERATION_TIME, "P1P2IndoorUnitFanOperationTimeValid"),
+        eev_open_pulses=read_when_valid(f.F_P1P2_EEV_OPEN_PULSES, "P1P2IndoorUnitEEVOpenPulsesValid"),
+        gas_pipe_temp=read_when_valid(
+            f.F_P1P2_GAS_PIPE_TEMP, "P1P2IndoorUnitHeatExchangerGasPipeThermistorValid"
+        ),
+        heat_exchanger_temp=read_when_valid(
+            f.F_P1P2_HEAT_EXCHANGER_TEMP, "P1P2IndoorUnitHeatExchangerThermistorValid"
+        ),
+        fan_tap_active=(
+            optional_bool(f.F_P1P2_FAN_TAP) if payload.data.get("P1P2IndoorUnitFanTapValid") is True else None
+        ),
+        humidifier_on=optional_bool(f.F_P1P2_HUMIDIFIER),
+        dehumidifier_on=optional_bool(f.F_P1P2_DEHUMIDIFIER),
+        drain_pump_on=bool_when_valid(f.F_P1P2_DRAIN_PUMP, "P1P2DrainPumpOnOffValid"),
+        float_switch_on=bool_when_valid(f.F_P1P2_FLOAT_SWITCH, "P1P2FloatOnOffValid"),
+        anti_freeze_on=bool_when_valid(f.F_P1P2_ANTI_FREEZE, "P1P2AntiFreezeControlOnOffValid"),
+        electric_heater_on=bool_when_valid(f.F_P1P2_ELECTRIC_HEATER, "P1P2ElectricHeaterOnOffValid"),
+        humidifier_control_on=bool_when_valid(f.F_P1P2_HUMIDIFIER_CONTROL, "P1P2HumidifierOnOffValid"),
+        recent_fault=_most_recent_fault(payload.data),
+    )
+
+
+def _most_recent_fault(data: dict[str, object]) -> DaikinFault | None:
+    """Return the newest valid record from the thermostat fault-history slots."""
+    faults: list[DaikinFault] = []
+    for index in range(1, 26):
+        code = data.get(f"fault{index}Code")
+        timestamp = data.get(f"fault{index}Date")
+        level = data.get(f"fault{index}Level")
+        if not isinstance(code, int) or code in {0, 255, 65535}:
+            continue
+        if not isinstance(timestamp, int) or timestamp < 946684800:
+            continue
+        faults.append(
+            DaikinFault(
+                code=code,
+                occurred_at=datetime.fromtimestamp(timestamp, UTC),
+                level=level if isinstance(level, int) and level != 255 else None,
+            )
+        )
+    return max(faults, key=lambda fault: fault.occurred_at) if faults else None

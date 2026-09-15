@@ -13,6 +13,7 @@ A custom component for Home Assistant to integrate with Daikin One+ smart HVAC s
     - [Heat Pumps](#heat-pumps)
     - [Air Conditioners](#air-conditioners)
     - [Furnaces](#furnaces)
+    - [Mini Multi-Split Indoor Units](#mini-multi-split-indoor-units)
   - [Installation](#installation)
     - [Install via HACS](#install-via-hacs)
     - [Manual Install](#manual-install)
@@ -24,6 +25,25 @@ A custom component for Home Assistant to integrate with Daikin One+ smart HVAC s
 - Intelligent handling of thermostat updates for ultra-fast response times
 - Sensors for status, temperatures, airflow, demand, etc. for all connected equipment
 - Outdoor and indoor air quality sensors (if reported by your system)
+
+## Raw API diagnostics
+
+To inspect the exact telemetry returned by Daikin before Home Assistant maps
+it, run the standalone probe from this repository:
+
+```powershell
+python tools/daikin_raw_probe.py
+```
+
+It prompts for the Daikin One email and password without echoing the password,
+calls the same read-only Skyport endpoints used by the integration, and writes
+the raw responses to `diagnostics/daikin_raw_<UTC timestamp>.json`. It never
+writes authentication tokens. The file can include thermostat names, IDs, and
+equipment serial numbers, so keep it private and redact those before sharing.
+
+For non-interactive use, set `DAIKIN_ONE_EMAIL` and `DAIKIN_ONE_PASSWORD` in
+the process environment. Use `--help` to choose a different output path or
+skip the location/device inventory calls.
 
 <!-- markdownlint-disable-next-line no-inline-html -->
 <img src="docs/dashboard.png" width="350" alt="dashboard example">
@@ -63,6 +83,11 @@ If you have a Daikin One+ system and your equipment is not listed here, please o
 
 - [DM97MC](https://daikincomfort.com/products/heating-cooling/whole-house/gas-furnaces/dm97mc)
 - [DM80VC](https://daikincomfort.com/products/heating-cooling/whole-house/gas-furnaces/dm80vc)
+
+### Mini Multi-Split Indoor Units
+
+- [FDMQ12WVJU9](https://www.daikinmea.com/en_us/product-group/dmea-concealed-ceiling/dame-fdmqn-series.html)
+- [FDMQ24WVJU9](https://www.daikinmea.com/en_us/product-group/dmea-concealed-ceiling/dame-fdmqn-series.html)
 
 ## Installation
 

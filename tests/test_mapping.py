@@ -15,6 +15,7 @@ from custom_components.daikinone.client.models import (
     DaikinThermostatMode,
     DaikinThermostatStatus,
     DaikinUserCredentials,
+    DaikinSplitUnit,
 )
 
 
@@ -119,6 +120,52 @@ NO_EQUIPMENT: dict[str, Any] = {
     "ctCoilUnitType": 255,
 }
 
+P1P2_UNIT_DATA: dict[str, Any] = {
+    "P1P2UnitType": 1,
+    "P1P2IndoorUnitModelNameManual": "FTX-MODEL       ",
+    "P1P2IndoorUnitSerialNumber": "P1P2-SERIAL     ",
+    "P1P2S21equipmentStatus": 1,
+    "P1P2hspFromEquipment": 20.0,
+    "P1P2cspFromEquipment": 25.0,
+    "P1P2IndoorUnitFanSpeed": 77,
+    "P1P2IndoorUnitFanSpeedValid": True,
+    "P1P2IndoorUnitFlapSwing": 32,
+    "P1P2IndoorUnitFlapSwingValid": True,
+    "P1P2IndoorSuctionAirThermistor": 25.8,
+    "P1P2IndoorSuctionAirThermistorValid": True,
+    "P1P2IndoorUnitDischargeAirThermistor": 0.0,
+    "P1P2IndoorUnitDischargeAirThermistorValid": False,
+    "P1P2IndoorUnitOperatingTime": 2158,
+    "P1P2IndoorUnitOperatingTimeValid": True,
+    "P1P2IndoorUnitEnergizedTime": 5826,
+    "P1P2IndoorUnitEnergizedTimeValid": True,
+    "P1P2IndoorUnitFanOperationTime": 1588,
+    "P1P2IndoorUnitFanOperationTimeValid": True,
+    "P1P2IndoorUnitEEVOpenPulses": 0,
+    "P1P2IndoorUnitEEVOpenPulsesValid": True,
+    "P1P2IndoorUnitHeatExchangerGasPipeThermistor": 21.2,
+    "P1P2IndoorUnitHeatExchangerGasPipeThermistorValid": True,
+    "P1P2IndoorUnitHeatExchangerThermistor": 18.9,
+    "P1P2IndoorUnitHeatExchangerThermistorValid": True,
+    "P1P2IndoorUnitFanTap": 1,
+    "P1P2IndoorUnitFanTapValid": True,
+    "P1P2DrainPumpOnOff": True,
+    "P1P2DrainPumpOnOffValid": True,
+    "P1P2FloatOnOff": False,
+    "P1P2FloatOnOffValid": True,
+    "P1P2AntiFreezeControlOnOff": False,
+    "P1P2AntiFreezeControlOnOffValid": True,
+    "P1P2ElectricHeaterOnOff": False,
+    "P1P2ElectricHeaterOnOffValid": True,
+    "P1P2HumidifierOnOff": False,
+    "P1P2HumidifierOnOffValid": True,
+    "fault1Code": 144,
+    "fault1Date": 1789251868,
+    "fault1Level": 8,
+    "AuxHumidifierStatus": 0,
+    "AuxDehumidifierStatus": 0,
+}
+
 
 def _make_device(*equipment_blocks: dict[str, Any]) -> dict[str, Any]:
     data: dict[str, Any] = {**COMMON_THERMOSTAT_DATA, **NO_EQUIPMENT}
@@ -139,6 +186,29 @@ def _make_device(*equipment_blocks: dict[str, Any]) -> dict[str, Any]:
 
 
 class TestMappingPreservesValidFields:
+    async def test_p1p2_validity_flags_control_sensor_availability(self, daikin_client: DaikinOne) -> None:
+        device_data = _make_device(P1P2_UNIT_DATA)
+
+        with patch.object(daikin_client._transport, "request", new_callable=AsyncMock) as mock_req:
+            mock_req.return_value = [device_data]
+            await daikin_client.update()
+
+        thermostat = daikin_client.get_thermostats()["device123"]
+        unit = next(e for e in thermostat.equipment.values() if isinstance(e, DaikinSplitUnit))
+        assert unit.mode is DaikinThermostatMode.HEAT
+        assert unit.equipment_status is DaikinThermostatStatus.IDLE
+        assert unit.discharge_temperature is None
+        assert unit.eev_open_pulses == 0
+        assert unit.gas_pipe_temp is not None
+        assert unit.drain_pump_on is True
+        assert unit.float_switch_on is False
+        assert unit.anti_freeze_on is False
+        assert unit.electric_heater_on is False
+        assert unit.humidifier_control_on is False
+        assert unit.recent_fault is not None
+        assert unit.recent_fault.code == 144
+        assert unit.recent_fault.level == 8
+
     async def test_air_handler_garbage_demand_becomes_none(self, daikin_client: DaikinOne) -> None:
         ah = {**AIR_HANDLER_DATA, "ctAHFanRequestedDemand": 255, "ctAHHeatRequestedDemand": 255}
         device_data = _make_device(ah)

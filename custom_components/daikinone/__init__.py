@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 from homeassistant.util import Throttle
 
 from custom_components.daikinone.const import (
@@ -81,12 +82,28 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         # migrate to 1.2
         if entry.minor_version < 2:
-            entry.minor_version = 2
-
             # retain legacy id schema if this is an upgrade of an existing entry
             new[CONF_OPTION_ENTITY_UID_SCHEMA_VERSION_KEY] = 0
 
-        hass.config_entries.async_update_entry(entry, data=new)
+        # The original P1/P2 sensors used percentage units for two fields that
+        # are not percentages.  Keep their entity IDs while moving their
+        # unique IDs to the corrected RPM/louvre entities.
+        if entry.minor_version < 3:
+            registry = er.async_get(hass)
+            for entity in er.async_entries_for_config_entry(registry, entry.entry_id):
+                replacements = {
+                    "-Fan Speed Percentage": "-Fan Speed",
+                    "-Flap Swing": "-Louvre Setting",
+                }
+                for old_suffix, new_suffix in replacements.items():
+                    if entity.unique_id.endswith(old_suffix):
+                        registry.async_update_entity(
+                            entity.entity_id,
+                            new_unique_id=entity.unique_id.removesuffix(old_suffix) + new_suffix,
+                        )
+                        break
+
+        hass.config_entries.async_update_entry(entry, data=new, minor_version=3)
 
     log.info("Migration to version %s.%s successful", entry.version, entry.minor_version)
 

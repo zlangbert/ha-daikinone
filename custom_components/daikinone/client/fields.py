@@ -131,3 +131,36 @@ F_EEV_PRESSURE = IntField("ctEEVCoilPressureSensor", Sentinel.I16)
 F_EEV_SUPERHEAT_TEMP = TempField("ctEEVCoilSuperHeatValue")
 F_EEV_SUBCOOL_TEMP = TempField("ctEEVCoilSubCoolValue")
 F_EEV_SUCTION_TEMP = TempField("ctEEVCoilSuctionTemperature")
+
+
+# --- P1/P2 / S21 indoor-unit fields ---
+#
+# These fields are reported by Daikin mini- and multi-split systems.  Their
+# zero values are retained: the raw API response must establish whether zero
+# is a valid measurement for a particular model before it is filtered.
+F_P1P2_UNIT_TYPE = UnitTypeField("P1P2UnitType")
+F_P1P2_MODEL = StringField("P1P2IndoorUnitModelNameManual")
+F_P1P2_SERIAL = StringField("P1P2IndoorUnitSerialNumber")
+F_P1P2_MODE = IntField("mode", Sentinel.U8)
+F_P1P2_INDOOR_TEMP = CelsiusField("tempIndoor")
+F_P1P2_INDOOR_HUMIDITY = PercentField("humIndoor")
+F_P1P2_HEAT_SETPOINT = CelsiusField("P1P2hspFromEquipment")
+F_P1P2_COOL_SETPOINT = CelsiusField("P1P2cspFromEquipment")
+F_P1P2_FAN_SPEED = IntField("P1P2IndoorUnitFanSpeed", Sentinel.U8)
+F_P1P2_FLAP_SWING = IntField("P1P2IndoorUnitFlapSwing", Sentinel.U8)
+F_P1P2_SUCTION_TEMP = CelsiusField("P1P2IndoorSuctionAirThermistor")
+F_P1P2_DISCHARGE_TEMP = CelsiusField("P1P2IndoorUnitDischargeAirThermistor")
+F_P1P2_OPERATING_TIME = IntField("P1P2IndoorUnitOperatingTime", Sentinel.U32)
+F_P1P2_ENERGIZED_TIME = IntField("P1P2IndoorUnitEnergizedTime", Sentinel.U32)
+F_P1P2_FAN_OPERATION_TIME = IntField("P1P2IndoorUnitFanOperationTime", Sentinel.U32)
+F_P1P2_EEV_OPEN_PULSES = IntField("P1P2IndoorUnitEEVOpenPulses", Sentinel.U16)
+F_P1P2_GAS_PIPE_TEMP = CelsiusField("P1P2IndoorUnitHeatExchangerGasPipeThermistor")
+F_P1P2_HEAT_EXCHANGER_TEMP = CelsiusField("P1P2IndoorUnitHeatExchangerThermistor")
+F_P1P2_FAN_TAP = IntField("P1P2IndoorUnitFanTap", Sentinel.U8)
+F_P1P2_HUMIDIFIER = IntField("AuxHumidifierStatus", Sentinel.U8)
+F_P1P2_DEHUMIDIFIER = IntField("AuxDehumidifierStatus", Sentinel.U8)
+F_P1P2_DRAIN_PUMP = IntField("P1P2DrainPumpOnOff", Sentinel.U8)
+F_P1P2_FLOAT_SWITCH = IntField("P1P2FloatOnOff", Sentinel.U8)
+F_P1P2_ANTI_FREEZE = IntField("P1P2AntiFreezeControlOnOff", Sentinel.U8)
+F_P1P2_ELECTRIC_HEATER = IntField("P1P2ElectricHeaterOnOff", Sentinel.U8)
+F_P1P2_HUMIDIFIER_CONTROL = IntField("P1P2HumidifierOnOff", Sentinel.U8)

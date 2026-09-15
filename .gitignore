@@ -15,5 +15,11 @@ wheels/
 # home assistant
 .homeassistant
 
+# locally captured API diagnostics; may contain equipment identifiers
+diagnostics/
+
+# local Daikin credentials used only by the raw API probe
+.env
+
 # ide
 .vscode

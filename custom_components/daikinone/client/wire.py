@@ -61,7 +61,7 @@ class IntField:
     """uint/int wire value, optionally scaled; None when value matches sentinel."""
 
     key: str
-    sentinel: Sentinel
+    sentinel: int
     scale: float = 1.0
 
 
@@ -151,6 +151,8 @@ def read(data: dict[str, Any], f: UnitTypeField) -> bool: ...
 def read(data: dict[str, Any], f: Any) -> Any:
     if isinstance(f, UnitTypeField):
         return data.get(f.key, Sentinel.U8) < Sentinel.U8
+    if f.key not in data:
+        return None
     value = data[f.key]
     if isinstance(f, IntField):
         return None if value == f.sentinel else round(value * f.scale)
