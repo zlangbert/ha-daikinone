@@ -25,9 +25,16 @@ class DaikinOneEntity[D: DaikinDevice](Entity):
 
     def get_device_info(self) -> DeviceInfo | None:
         """Return device information for this sensor."""
+        match self._device:
+            case DaikinThermostat():
+                device_id = self._device.id
+            case DaikinEquipment():
+                device_id = f"{self._device.thermostat_id}-{self._device.id}"
+            case _:
+                device_id = self._device.id
 
         info = DeviceInfo(
-            identifiers={(DOMAIN, self._device.id)},
+            identifiers={(DOMAIN, device_id)},
             name=self.device_name,
             manufacturer=MANUFACTURER,
             model=self._device.model,
