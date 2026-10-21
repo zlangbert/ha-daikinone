@@ -3,12 +3,17 @@ from typing import Any
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from homeassistant.components.select import SelectEntityDescription
 from homeassistant.components.sensor import SensorEntityDescription
 
 from custom_components.daikinone import DaikinOneData
 from custom_components.daikinone.client.client import DaikinOne
 from custom_components.daikinone.client.models import DaikinIndoorUnit, DaikinUserCredentials
 from custom_components.daikinone.const import CONF_OPTION_ENTITY_UID_SCHEMA_VERSION_KEY
+from custom_components.daikinone.select import (
+    DUAL_FUEL_PRIORITY_OPTIONS,
+    DaikinOneDualFuelPrioritySelect,
+)
 from custom_components.daikinone.sensor import DaikinOneEquipmentSensor, DaikinOneThermostatSensor
 from tests.test_mapping import AIR_HANDLER_DATA, _make_device
 
@@ -103,3 +108,41 @@ class TestEntityAvailability:
 
         assert sensor.available is True
         assert sensor.native_value == 45
+
+
+class TestDualFuelPrioritySelect:
+    async def test_select_state_and_options(self, daikin_client: DaikinOne, data: DaikinOneData) -> None:
+        device_data = _make_device()
+        device_data["data"]["ctDualFuelFurnaceLockoutEnable"] = False
+
+        with patch.object(daikin_client._transport, "request", new_callable=AsyncMock) as mock_req:
+            await _refresh(daikin_client, mock_req, device_data)
+
+            thermostat = daikin_client.get_thermostats()["device123"]
+            select = DaikinOneDualFuelPrioritySelect(
+                description=SelectEntityDescription(
+                    key="dual_fuel_priority",
+                    name="Dual Fuel Priority",
+                    icon="mdi:leaf",
+                    options=DUAL_FUEL_PRIORITY_OPTIONS,
+                ),
+                data=data,
+                thermostat=thermostat,
+            )
+            select.update_entity_attributes()
+            assert select.current_option == "Comfort"
+            assert select.icon == "mdi:leaf"
+            assert select.unique_id == "device123-dual_fuel_priority"
+
+            device_data_on = _make_device()
+            device_data_on["data"]["ctDualFuelFurnaceLockoutEnable"] = True
+            mock_req.return_value = [device_data_on]
+
+            with patch.object(select, "async_write_ha_state"):
+                await select.async_select_option("Efficiency")
+
+            assert select.current_option == "Efficiency"
+            assert select.icon == "mdi:leaf"
+
+            with pytest.raises(ValueError):
+                await select.async_select_option("Invalid")

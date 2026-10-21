@@ -217,4 +217,5 @@ class DaikinThermostat(DaikinDevice):
     outdoor_humidity: int | None
     air_quality_outdoor: DaikinOneAirQualitySensorOutdoor | None
     air_quality_indoor: DaikinOneAirQualitySensorIndoor | None
+    dual_fuel_furnace_lockout_enable: bool | None
     equipment: dict[str, DaikinEquipment]

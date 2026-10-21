@@ -63,6 +63,7 @@ def map_thermostat(payload: DaikinDeviceDataResponse) -> DaikinThermostat:
         outdoor_humidity=read(payload.data, f.F_HUM_OUTDOOR),
         air_quality_outdoor=map_air_quality_outdoor(payload),
         air_quality_indoor=map_air_quality_indoor(payload),
+        dual_fuel_furnace_lockout_enable=payload.data.get("ctDualFuelFurnaceLockoutEnable"),
         equipment=map_equipment(payload),
     )
 

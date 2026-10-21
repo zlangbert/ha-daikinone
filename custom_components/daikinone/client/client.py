@@ -107,3 +107,11 @@ class DaikinOne:
             method="PUT",
             body={"fanCirculateSpeed": fan_speed.value},
         )
+
+    async def set_dual_fuel_furnace_lockout_enable(self, thermostat_id: str, enabled: bool) -> None:
+        """Enable or disable dual-fuel furnace lockout (prioritize efficiency)."""
+        await self._transport.request(
+            url=f"{DAIKIN_API_URL_DEVICE_DATA}/{thermostat_id}",
+            method="PUT",
+            body={"ctDualFuelFurnaceLockoutEnable": enabled},
+        )
