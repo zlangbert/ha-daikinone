@@ -102,20 +102,20 @@ class DaikinOneEntity[D: DaikinDevice](Entity):
         """
         # pause entity updates
         self._updates_paused = True
+        try:
+            # execute change operation
+            await operation()
 
-        # execute change operation
-        await operation()
+            # execute state update optimistically
+            optimistic_update(self._device)
+            self.update_entity_attributes()
+            self.async_write_ha_state()
 
-        # execute state update optimistically
-        optimistic_update(self._device)
-        self.update_entity_attributes()
-        self.async_write_ha_state()
-
-        # wait for remote state to be updated
-        await self._wait_for_updated_value(check)
-
-        # resume entity updates
-        self._updates_paused = False
+            # wait for remote state to be updated
+            await self._wait_for_updated_value(check)
+        finally:
+            # Always resume entity updates when the API or refresh fails.
+            self._updates_paused = False
 
         # full entity update to make sure everything is in sync
         await self.async_update(no_throttle=True)

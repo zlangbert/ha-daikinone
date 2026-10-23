@@ -14,6 +14,7 @@ from custom_components.daikinone.client.models import (
     DaikinOutdoorUnitReversingValveStatus,
     DaikinThermostat,
     DaikinThermostatCapability,
+    DaikinThermostatFanCirculateDuration,
     DaikinThermostatFanMode,
     DaikinThermostatFanSpeed,
     DaikinThermostatMode,
@@ -29,6 +30,20 @@ from custom_components.daikinone.client.wire import (
 log = logging.getLogger(__name__)
 
 
+def _time_slot(value: object) -> int | None:
+    if isinstance(value, int) and not isinstance(value, bool) and 0 <= value <= 95:
+        return value
+    return None
+
+
+def _optional_bool(value: object) -> bool | None:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, int) and value in (0, 1):
+        return bool(value)
+    return None
+
+
 def map_thermostat(payload: DaikinDeviceDataResponse) -> DaikinThermostat:
     capabilities: set[DaikinThermostatCapability] = set()
     if payload.data.get("ctSystemCapHeat"):
@@ -38,6 +53,7 @@ def map_thermostat(payload: DaikinDeviceDataResponse) -> DaikinThermostat:
     if payload.data.get("ctSystemCapEmergencyHeat"):
         capabilities.add(DaikinThermostatCapability.EMERGENCY_HEAT)
 
+    fan_circulate_duration_raw = payload.data.get("fanCirculateDuration")
     return DaikinThermostat(
         id=payload.id,
         location_id=payload.locationId,
@@ -64,6 +80,18 @@ def map_thermostat(payload: DaikinDeviceDataResponse) -> DaikinThermostat:
         air_quality_outdoor=map_air_quality_outdoor(payload),
         air_quality_indoor=map_air_quality_indoor(payload),
         equipment=map_equipment(payload),
+        fan_circulate_start=_time_slot(payload.data.get("fanCirculateStart")),
+        fan_circulate_stop=_time_slot(payload.data.get("fanCirculateStop")),
+        fan_circulate_duration=(
+            DaikinThermostatFanCirculateDuration(fan_circulate_duration_raw)
+            if fan_circulate_duration_raw is not None
+            else None
+        ),
+        night_mode_enabled=_optional_bool(payload.data.get("nightModeEnabled")),
+        night_mode_active=_optional_bool(payload.data.get("nightModeActive")),
+        night_mode_start=_time_slot(payload.data.get("nightModeStart")),
+        night_mode_stop=_time_slot(payload.data.get("nightModeStop")),
+        night_mode_light_bar_allowed=_optional_bool(payload.data.get("nightModeLightBarAllowed")),
     )
 
 
