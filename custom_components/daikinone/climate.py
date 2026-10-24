@@ -1,5 +1,6 @@
 from enum import Enum
 import logging
+from typing import Any
 
 from homeassistant.components.climate import (
     ClimateEntity,
@@ -207,6 +208,8 @@ class DaikinOneThermostat(DaikinOneEntity[DaikinThermostat], ClimateEntity):
                     t.set_point_heat = heat
                 if cool is not None:
                     t.set_point_cool = cool
+                if self._device.schedule.enabled:
+                    t.schedule.override = True
 
             await self.update_state_optimistically(
                 operation=lambda: self._data.daikin.set_thermostat_home_set_points(
@@ -231,6 +234,8 @@ class DaikinOneThermostat(DaikinOneEntity[DaikinThermostat], ClimateEntity):
                     # update set points optimistically
                     def update(t: DaikinThermostat):
                         t.set_point_heat = temperature
+                        if self._device.schedule.enabled:
+                            t.schedule.override = True
 
                     await self.update_state_optimistically(
                         operation=lambda: self._data.daikin.set_thermostat_home_set_points(
@@ -248,6 +253,8 @@ class DaikinOneThermostat(DaikinOneEntity[DaikinThermostat], ClimateEntity):
                     # update set points optimistically
                     def update(t: DaikinThermostat):
                         t.set_point_cool = temperature
+                        if self._device.schedule.enabled:
+                            t.schedule.override = True
 
                     await self.update_state_optimistically(
                         operation=lambda: self._data.daikin.set_thermostat_home_set_points(
@@ -371,3 +378,11 @@ class DaikinOneThermostat(DaikinOneEntity[DaikinThermostat], ClimateEntity):
                 self._attr_fan_mode = DaikinOneThermostatFanMode.ALWAYS_ON.value
             case DaikinThermostatFanMode.SCHEDULED:
                 self._attr_fan_mode = DaikinOneThermostatFanMode.SCHEDULED.value
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return device specific state attributes."""
+        return {
+            "schedule_enabled": self._device.schedule.enabled,
+            "schedule_override": self._device.schedule.override,
+        }

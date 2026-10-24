@@ -8,9 +8,11 @@ DOMAIN = "daikinone"
 MANUFACTURER = "Daikin"
 
 PLATFORMS = [
+    Platform.BUTTON,
     Platform.CLIMATE,
     Platform.SELECT,
     Platform.SENSOR,
+    Platform.SWITCH,
 ]
 
 MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=30)

@@ -171,6 +171,7 @@ class DaikinThermostatStatus(Enum):
 @dataclass
 class DaikinThermostatSchedule:
     enabled: bool
+    override: bool = False
 
 
 class DaikinThermostatFanMode(Enum):

@@ -216,9 +216,7 @@ class TestMappingPreservesValidFields:
         thermostat = daikin_client.get_thermostats()["device123"]
         assert thermostat.indoor_humidity is None
 
-    async def test_thermostat_still_mapped_when_equipment_fields_garbage(
-        self, daikin_client: DaikinOne
-    ) -> None:
+    async def test_thermostat_still_mapped_when_equipment_fields_garbage(self, daikin_client: DaikinOne) -> None:
         ah = {**AIR_HANDLER_DATA, "ctAHFanRequestedDemand": 255, "ctIndoorPower": 65535}
         device_data = _make_device(ah)
 
@@ -238,9 +236,7 @@ class TestEquipmentSkippedOnInvalidIdentity:
     eid is never polluted with fallback values, so entities go temporarily unavailable
     during garbage refreshes rather than being orphaned and re-registered under a new id."""
 
-    async def test_air_handler_skipped_when_serial_invalid(
-        self, daikin_client: DaikinOne
-    ) -> None:
+    async def test_air_handler_skipped_when_serial_invalid(self, daikin_client: DaikinOne) -> None:
         ah = {**AIR_HANDLER_DATA, "ctAHSerialNoCharacter1_15": "he\ufffdlo"}
         device_data = _make_device(ah)
 
@@ -302,9 +298,7 @@ class TestEquipmentUnitTypeAbsent:
     """P1/P2 mini-split payloads omit the ``ct*UnitType`` keys entirely; the mapping
     must treat that as 'equipment not present' rather than KeyError-ing on setup."""
 
-    async def test_no_equipment_mapped_when_unit_type_keys_missing(
-        self, daikin_client: DaikinOne
-    ) -> None:
+    async def test_no_equipment_mapped_when_unit_type_keys_missing(self, daikin_client: DaikinOne) -> None:
         device_data = _make_device()
         for key in ("ctAHUnitType", "ctIFCUnitType", "ctOutdoorUnitType", "ctCoilUnitType"):
             del device_data["data"][key]
@@ -316,9 +310,7 @@ class TestEquipmentUnitTypeAbsent:
         thermostat = daikin_client.get_thermostats()["device123"]
         assert thermostat.equipment == {}
 
-    async def test_partial_unit_type_keys_gate_only_their_own_equipment(
-        self, daikin_client: DaikinOne
-    ) -> None:
+    async def test_partial_unit_type_keys_gate_only_their_own_equipment(self, daikin_client: DaikinOne) -> None:
         device_data = _make_device(OUTDOOR_UNIT_DATA)
         del device_data["data"]["ctAHUnitType"]
         del device_data["data"]["ctIFCUnitType"]
@@ -339,9 +331,7 @@ class TestThermostatCapabilitiesAbsent:
     must treat missing keys as 'capability not advertised' rather than KeyError-ing
     on setup."""
 
-    async def test_no_capabilities_when_cap_keys_missing(
-        self, daikin_client: DaikinOne
-    ) -> None:
+    async def test_no_capabilities_when_cap_keys_missing(self, daikin_client: DaikinOne) -> None:
         device_data = _make_device()
         for key in ("ctSystemCapHeat", "ctSystemCapCool", "ctSystemCapEmergencyHeat"):
             del device_data["data"][key]
@@ -432,9 +422,7 @@ class TestEnumSanitization:
             mock_req.return_value = [device_data]
             await daikin_client.update()
 
-        assert (
-            daikin_client.get_thermostats()["device123"].fan_mode is DaikinThermostatFanMode.UNKNOWN
-        )
+        assert daikin_client.get_thermostats()["device123"].fan_mode is DaikinThermostatFanMode.UNKNOWN
 
     async def test_thermostat_fan_speed_sentinel_becomes_unknown(self, daikin_client: DaikinOne) -> None:
         device_data = _make_device()
@@ -444,13 +432,9 @@ class TestEnumSanitization:
             mock_req.return_value = [device_data]
             await daikin_client.update()
 
-        assert (
-            daikin_client.get_thermostats()["device123"].fan_speed is DaikinThermostatFanSpeed.UNKNOWN
-        )
+        assert daikin_client.get_thermostats()["device123"].fan_speed is DaikinThermostatFanSpeed.UNKNOWN
 
-    async def test_thermostat_enum_unexpected_value_becomes_unknown(
-        self, daikin_client: DaikinOne
-    ) -> None:
+    async def test_thermostat_enum_unexpected_value_becomes_unknown(self, daikin_client: DaikinOne) -> None:
         device_data = _make_device()
         device_data["data"]["mode"] = 99
 
@@ -460,9 +444,7 @@ class TestEnumSanitization:
 
         assert daikin_client.get_thermostats()["device123"].mode is DaikinThermostatMode.UNKNOWN
 
-    async def test_outdoor_reversing_valve_unexpected_value_becomes_unknown(
-        self, daikin_client: DaikinOne
-    ) -> None:
+    async def test_outdoor_reversing_valve_unexpected_value_becomes_unknown(self, daikin_client: DaikinOne) -> None:
         device_data = _make_device({**OUTDOOR_UNIT_DATA, "ctReversingValve": 42})
 
         with patch.object(daikin_client._transport, "request", new_callable=AsyncMock) as mock_req:
@@ -476,9 +458,7 @@ class TestEnumSanitization:
         )
         assert unit.reversing_valve is DaikinOutdoorUnitReversingValveStatus.UNKNOWN
 
-    async def test_outdoor_heater_unexpected_value_becomes_unknown(
-        self, daikin_client: DaikinOne
-    ) -> None:
+    async def test_outdoor_heater_unexpected_value_becomes_unknown(self, daikin_client: DaikinOne) -> None:
         device_data = _make_device({**OUTDOOR_UNIT_DATA, "ctCrankCaseHeaterOnOff": 42})
 
         with patch.object(daikin_client._transport, "request", new_callable=AsyncMock) as mock_req:

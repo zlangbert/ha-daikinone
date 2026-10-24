@@ -107,3 +107,19 @@ class DaikinOne:
             method="PUT",
             body={"fanCirculateSpeed": fan_speed.value},
         )
+
+    async def set_thermostat_schedule_enabled(self, thermostat_id: str, enabled: bool) -> None:
+        """Enable or disable thermostat schedule"""
+        await self._transport.request(
+            url=f"{DAIKIN_API_URL_DEVICE_DATA}/{thermostat_id}",
+            method="PUT",
+            body={"schedEnabled": enabled, "schedOverride": 0},
+        )
+
+    async def resume_thermostat_schedule(self, thermostat_id: str) -> None:
+        """Resume scheduled set points by clearing schedule override and ensuring schedule is enabled"""
+        await self._transport.request(
+            url=f"{DAIKIN_API_URL_DEVICE_DATA}/{thermostat_id}",
+            method="PUT",
+            body={"schedOverride": 0, "schedEnabled": True},
+        )
