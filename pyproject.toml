@@ -29,3 +29,6 @@ docstring-code-format = true
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+
+[tool.ty.rules]
+invalid-property-type-override = "ignore"

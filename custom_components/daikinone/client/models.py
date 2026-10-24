@@ -49,7 +49,7 @@ class DaikinOutdoorUnitReversingValveStatus(Enum):
     UNKNOWN = 255
 
     @classmethod
-    def _missing_(cls, value: object) -> "DaikinOutdoorUnitReversingValveStatus":
+    def _missing_(cls, value: object) -> DaikinOutdoorUnitReversingValveStatus:
         return cls.UNKNOWN
 
 
@@ -59,7 +59,7 @@ class DaikinOutdoorUnitHeaterStatus(Enum):
     UNKNOWN = 255
 
     @classmethod
-    def _missing_(cls, value: object) -> "DaikinOutdoorUnitHeaterStatus":
+    def _missing_(cls, value: object) -> DaikinOutdoorUnitHeaterStatus:
         return cls.UNKNOWN
 
 
@@ -151,7 +151,7 @@ class DaikinThermostatMode(Enum):
     UNKNOWN = 255
 
     @classmethod
-    def _missing_(cls, value: object) -> "DaikinThermostatMode":
+    def _missing_(cls, value: object) -> DaikinThermostatMode:
         return cls.UNKNOWN
 
 
@@ -164,7 +164,7 @@ class DaikinThermostatStatus(Enum):
     UNKNOWN = 255
 
     @classmethod
-    def _missing_(cls, value: object) -> "DaikinThermostatStatus":
+    def _missing_(cls, value: object) -> DaikinThermostatStatus:
         return cls.UNKNOWN
 
 
@@ -180,7 +180,7 @@ class DaikinThermostatFanMode(Enum):
     UNKNOWN = 255
 
     @classmethod
-    def _missing_(cls, value: object) -> "DaikinThermostatFanMode":
+    def _missing_(cls, value: object) -> DaikinThermostatFanMode:
         return cls.UNKNOWN
 
 
@@ -191,7 +191,20 @@ class DaikinThermostatFanSpeed(Enum):
     UNKNOWN = 255
 
     @classmethod
-    def _missing_(cls, value: object) -> "DaikinThermostatFanSpeed":
+    def _missing_(cls, value: object) -> DaikinThermostatFanSpeed:
+        return cls.UNKNOWN
+
+
+class DaikinThermostatFanCirculateDuration(Enum):
+    CONTINUOUS = 0
+    MIN_5 = 1
+    MIN_15 = 2
+    MIN_30 = 3
+    MIN_45 = 4
+    UNKNOWN = 255
+
+    @classmethod
+    def _missing_(cls, value: object) -> DaikinThermostatFanCirculateDuration:
         return cls.UNKNOWN
 
 
@@ -218,3 +231,16 @@ class DaikinThermostat(DaikinDevice):
     air_quality_outdoor: DaikinOneAirQualitySensorOutdoor | None
     air_quality_indoor: DaikinOneAirQualitySensorIndoor | None
     equipment: dict[str, DaikinEquipment]
+    fan_circulate_start: int | None = None
+    fan_circulate_stop: int | None = None
+    fan_circulate_duration: DaikinThermostatFanCirculateDuration | None = None
+    night_mode_enabled: bool | None = None
+    night_mode_active: bool | None = None
+    night_mode_start: int | None = None
+    night_mode_stop: int | None = None
+    night_mode_light_bar_allowed: bool | None = None
+    quiet_mode_enabled: bool | None = None
+    quiet_mode_active: bool | None = None
+    quiet_mode_start_time: int | None = None
+    quiet_mode_stop_time: int | None = None
+    quiet_mode_ho_display_enable: bool | None = None
