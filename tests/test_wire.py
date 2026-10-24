@@ -7,6 +7,7 @@ from pydantic import ValidationError
 from custom_components.daikinone.client.wire import (
     CelsiusField,
     DaikinDeviceDataResponse,
+    DaikinLocationResponse,
     FloatField,
     IntField,
     PercentField,
@@ -266,3 +267,32 @@ class TestDaikinDeviceDataResponse:
         data["data"] = nested
         payload = DaikinDeviceDataResponse(**data)  # type: ignore[arg-type]
         assert payload.data == nested
+
+
+class TestDaikinLocationResponse:
+    def test_parses_valid_location_payload(self) -> None:
+        payload = DaikinLocationResponse(
+            id="loc123",
+            name="Home",
+            address='{"address":"123 Main St","apt":""}',
+            city="Calgary",
+            province="AB",
+            postalCode="T3B5R5",
+            country="CA",
+            timeZone="America/Regina",
+            latitude=51.087,
+            longitude=-114.206,
+            hasOwner=True,
+        )
+        assert payload.id == "loc123"
+        assert payload.name == "Home"
+        assert payload.timeZone == "America/Regina"
+        assert payload.hasOwner is True
+
+    def test_location_response_defaults(self) -> None:
+        payload = DaikinLocationResponse(id="loc123", name="Home")
+        assert payload.address == ""
+        assert payload.city == ""
+        assert payload.latitude is None
+        assert payload.longitude is None
+        assert payload.hasOwner is False

@@ -4,8 +4,9 @@ import copy
 import logging
 from typing import Any
 
-from custom_components.daikinone.client.mapping import map_thermostat
+from custom_components.daikinone.client.mapping import map_location, map_thermostat
 from custom_components.daikinone.client.models import (
+    DaikinLocation,
     DaikinThermostat,
     DaikinThermostatFanMode,
     DaikinThermostatFanSpeed,
@@ -15,7 +16,9 @@ from custom_components.daikinone.client.models import (
 from custom_components.daikinone.client.transport import DaikinTransport
 from custom_components.daikinone.client.wire import (
     DAIKIN_API_URL_DEVICE_DATA,
+    DAIKIN_API_URL_LOCATIONS,
     DaikinDeviceDataResponse,
+    DaikinLocationResponse,
 )
 from custom_components.daikinone.utils import Temperature
 
@@ -26,12 +29,28 @@ class DaikinOne:
     """Manages connection to Daikin API and fetching device data."""
 
     __thermostats: dict[str, DaikinThermostat] = dict()
+    __locations: dict[str, DaikinLocation] = dict()
 
     def __init__(self, creds: DaikinUserCredentials) -> None:
         self._transport = DaikinTransport(creds)
 
     async def login(self) -> bool:
         return await self._transport.login()
+
+    async def get_locations(self) -> dict[str, DaikinLocation]:
+        """Fetch and cache property locations from Daikin Skyport."""
+        raw = await self._transport.request(DAIKIN_API_URL_LOCATIONS)
+        locations: dict[str, DaikinLocation] = {}
+        for item in raw:
+            loc = map_location(DaikinLocationResponse(**item))
+            locations[loc.id] = loc
+        self.__locations = locations
+        return copy.deepcopy(self.__locations)
+
+    @property
+    def locations(self) -> dict[str, DaikinLocation]:
+        """Return cached property locations."""
+        return copy.deepcopy(self.__locations)
 
     async def get_all_raw_device_data(self) -> list[dict[str, Any]]:
         """Get raw device data"""
@@ -42,6 +61,12 @@ class DaikinOne:
         return await self._transport.request(f"{DAIKIN_API_URL_DEVICE_DATA}/{device_id}")
 
     async def update(self) -> None:
+        if not self.__locations:
+            try:
+                await self.get_locations()
+            except Exception:
+                log.warning("Failed to fetch locations during update", exc_info=True)
+
         raw = await self._transport.request(DAIKIN_API_URL_DEVICE_DATA)
         responses = [DaikinDeviceDataResponse(**d) for d in raw]
 
@@ -58,6 +83,11 @@ class DaikinOne:
 
     def get_thermostats(self) -> dict[str, DaikinThermostat]:
         return copy.deepcopy(self.__thermostats)
+
+    @property
+    def thermostats(self) -> dict[str, DaikinThermostat]:
+        """Return cached thermostats."""
+        return self.get_thermostats()
 
     async def set_thermostat_mode(self, thermostat_id: str, mode: DaikinThermostatMode) -> None:
         """Set thermostat mode"""

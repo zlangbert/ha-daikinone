@@ -53,8 +53,10 @@ class DaikinOneEntity[D: DaikinDevice](Entity):
 
     @property
     def device_parent(self) -> str | None:
-        """Return the name of the device."""
+        """Return the parent device ID."""
         match self._device:
+            case DaikinThermostat():
+                return self._device.location_id if self._device.location_id else None
             case DaikinEquipment():
                 thermostat = self._data.daikin.get_thermostat(self._device.thermostat_id)
                 return thermostat.id

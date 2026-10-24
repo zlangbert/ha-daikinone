@@ -1,5 +1,6 @@
 """Pure functions that turn a Daikin device-data payload into domain models."""
 
+import json
 import logging
 
 from custom_components.daikinone.client import fields as f
@@ -7,6 +8,7 @@ from custom_components.daikinone.client.models import (
     DaikinEEVCoil,
     DaikinEquipment,
     DaikinIndoorUnit,
+    DaikinLocation,
     DaikinOneAirQualitySensorIndoor,
     DaikinOneAirQualitySensorOutdoor,
     DaikinOutdoorUnit,
@@ -22,11 +24,43 @@ from custom_components.daikinone.client.models import (
 )
 from custom_components.daikinone.client.wire import (
     DaikinDeviceDataResponse,
+    DaikinLocationResponse,
     capitalize,
     read,
 )
 
 log = logging.getLogger(__name__)
+
+
+def map_location(response: DaikinLocationResponse) -> DaikinLocation:
+    """Map DaikinLocationResponse to DaikinLocation domain model."""
+    street_address = ""
+    apt = ""
+    if response.address:
+        try:
+            parsed = json.loads(response.address)
+            if isinstance(parsed, dict):
+                street_address = str(parsed.get("address", ""))
+                apt = str(parsed.get("apt", ""))
+            else:
+                street_address = str(response.address)
+        except json.JSONDecodeError, ValueError:
+            street_address = str(response.address)
+
+    return DaikinLocation(
+        id=response.id,
+        name=response.name,
+        street_address=street_address,
+        apt=apt,
+        city=response.city,
+        province=response.province,
+        postal_code=response.postalCode,
+        country=response.country,
+        time_zone=response.timeZone,
+        latitude=response.latitude,
+        longitude=response.longitude,
+        has_owner=response.hasOwner,
+    )
 
 
 def map_thermostat(payload: DaikinDeviceDataResponse) -> DaikinThermostat:

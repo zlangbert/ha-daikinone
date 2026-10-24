@@ -103,3 +103,25 @@ class TestEntityAvailability:
 
         assert sensor.available is True
         assert sensor.native_value == 45
+
+
+class TestEntityHierarchy:
+    async def test_thermostat_device_info_links_to_location(
+        self, daikin_client: DaikinOne, data: DaikinOneData
+    ) -> None:
+        with patch.object(daikin_client._transport, "request", new_callable=AsyncMock) as mock_req:
+            device_data = _make_device()
+            device_data["locationId"] = "loc_uuid_999"
+            await _refresh(daikin_client, mock_req, device_data)
+
+            thermostat = daikin_client.get_thermostats()["device123"]
+            sensor = DaikinOneThermostatSensor(
+                description=_humidity_description(),
+                data=data,
+                device=thermostat,
+                attribute=lambda t: t.indoor_humidity,
+            )
+
+        info = sensor.device_info
+        assert info is not None
+        assert info["via_device"] == ("daikinone", "loc_uuid_999")

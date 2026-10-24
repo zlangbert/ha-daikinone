@@ -33,6 +33,20 @@ DAIKIN_API_URL_DEVICE_DATA = urljoin(DAIKIN_API_URL_BASE, "/deviceData")
 # --- Payload shape ---
 
 
+class DaikinLocationResponse(BaseModel):
+    id: str
+    name: str
+    address: str = ""
+    city: str = ""
+    province: str = ""
+    postalCode: str = ""
+    country: str = ""
+    timeZone: str = ""
+    latitude: float | None = None
+    longitude: float | None = None
+    hasOwner: bool = False
+
+
 class DaikinDeviceDataResponse(BaseModel):
     id: str
     locationId: str

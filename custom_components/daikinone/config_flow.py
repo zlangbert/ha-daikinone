@@ -37,8 +37,18 @@ class DaikinOneConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if ok is False:
                 errors["base"] = "auth_failed"
             else:
+                title = "Daikin One"
+                try:
+                    locations = await daikin.get_locations()
+                    if locations:
+                        primary_location = next(iter(locations.values()))
+                        if getattr(primary_location, "name", None):
+                            title = primary_location.name
+                except Exception:
+                    log.warning("Failed to fetch location name for config entry title", exc_info=True)
+
                 return self.async_create_entry(
-                    title="Daikin One",
+                    title=title,
                     data={
                         CONF_EMAIL: email,
                         CONF_PASSWORD: password,
