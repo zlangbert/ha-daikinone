@@ -1,5 +1,7 @@
 import logging
-from typing import Callable
+from collections.abc import Callable
+from dataclasses import dataclass
+from typing import Any
 
 from homeassistant.components.sensor import SensorEntity, SensorEntityDescription
 from homeassistant.components.sensor.const import SensorDeviceClass, SensorStateClass
@@ -33,6 +35,153 @@ from custom_components.daikinone.client.models import (
 )
 
 log = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class ConsumableSensorConfig:
+    description: SensorEntityDescription
+    days_key: str
+    limit_key: str
+    runtime_key: str | None = None
+    runtime_limit_key: str | None = None
+    is_installed: Callable[[DaikinThermostat], bool] = lambda _: True
+
+
+CONSUMABLE_SENSOR_CONFIGS: list[ConsumableSensorConfig] = [
+    ConsumableSensorConfig(
+        description=SensorEntityDescription(
+            key="media_air_filter_life",
+            name="Media air filter life",
+            has_entity_name=True,
+            state_class=SensorStateClass.MEASUREMENT,
+            native_unit_of_measurement=PERCENTAGE,
+            entity_category=EntityCategory.DIAGNOSTIC,
+            icon="mdi:air-filter",
+            translation_key="media_air_filter_life",
+        ),
+        days_key="media_air_filter_days",
+        limit_key="media_air_filter_days_limit",
+        runtime_key="media_air_filter_runtime",
+        runtime_limit_key="media_air_filter_runtime_limit",
+        is_installed=lambda t: bool(t.num_media_filters and t.num_media_filters > 0),
+    ),
+    ConsumableSensorConfig(
+        description=SensorEntityDescription(
+            key="service_inspection_life",
+            name="Service inspection life",
+            has_entity_name=True,
+            state_class=SensorStateClass.MEASUREMENT,
+            native_unit_of_measurement=PERCENTAGE,
+            entity_category=EntityCategory.DIAGNOSTIC,
+            icon="mdi:wrench-clock",
+            translation_key="service_inspection_life",
+        ),
+        days_key="service_days",
+        limit_key="service_days_limit",
+    ),
+    ConsumableSensorConfig(
+        description=SensorEntityDescription(
+            key="humidifier_pad_life",
+            name="Humidifier pad life",
+            has_entity_name=True,
+            state_class=SensorStateClass.MEASUREMENT,
+            native_unit_of_measurement=PERCENTAGE,
+            entity_category=EntityCategory.DIAGNOSTIC,
+            icon="mdi:water-percent",
+            translation_key="humidifier_pad_life",
+        ),
+        days_key="hum_pad_days",
+        limit_key="hum_pad_days_limit",
+        runtime_key="hum_pad_runtime",
+        runtime_limit_key="hum_pad_runtime_limit",
+        is_installed=lambda t: bool(
+            (t.ct_humidifier_num_pads and t.ct_humidifier_num_pads > 0) or t.aux_humidifier_status
+        ),
+    ),
+    ConsumableSensorConfig(
+        description=SensorEntityDescription(
+            key="uv_lamp_life",
+            name="UV lamp life",
+            has_entity_name=True,
+            state_class=SensorStateClass.MEASUREMENT,
+            native_unit_of_measurement=PERCENTAGE,
+            entity_category=EntityCategory.DIAGNOSTIC,
+            icon="mdi:lightbulb-alert",
+            translation_key="uv_lamp_life",
+        ),
+        days_key="uv_days",
+        limit_key="uv_days_limit",
+        runtime_key="uv_runtime",
+        runtime_limit_key="uv_runtime_limit",
+        is_installed=lambda t: bool(t.num_uv_bulbs and t.num_uv_bulbs > 0),
+    ),
+    ConsumableSensorConfig(
+        description=SensorEntityDescription(
+            key="hepa_filter_life",
+            name="HEPA filter life",
+            has_entity_name=True,
+            state_class=SensorStateClass.MEASUREMENT,
+            native_unit_of_measurement=PERCENTAGE,
+            entity_category=EntityCategory.DIAGNOSTIC,
+            icon="mdi:air-filter",
+            translation_key="hepa_filter_life",
+        ),
+        days_key="hepa_filter_days",
+        limit_key="hepa_filter_days_limit",
+        runtime_key="hepa_filter_runtime",
+        runtime_limit_key="hepa_filter_runtime_limit",
+        is_installed=lambda t: bool(t.num_hepa_filters and t.num_hepa_filters > 0),
+    ),
+    ConsumableSensorConfig(
+        description=SensorEntityDescription(
+            key="electronic_filter_life",
+            name="Electronic filter life",
+            has_entity_name=True,
+            state_class=SensorStateClass.MEASUREMENT,
+            native_unit_of_measurement=PERCENTAGE,
+            entity_category=EntityCategory.DIAGNOSTIC,
+            icon="mdi:air-filter",
+            translation_key="electronic_filter_life",
+        ),
+        days_key="electronic_filter_days",
+        limit_key="electronic_filter_days_limit",
+        runtime_key="electronic_filter_runtime",
+        runtime_limit_key="electronic_filter_runtime_limit",
+        is_installed=lambda t: bool(t.num_electronic_filters and t.num_electronic_filters > 0),
+    ),
+    ConsumableSensorConfig(
+        description=SensorEntityDescription(
+            key="dehumidifier_filter_life",
+            name="Dehumidifier filter life",
+            has_entity_name=True,
+            state_class=SensorStateClass.MEASUREMENT,
+            native_unit_of_measurement=PERCENTAGE,
+            entity_category=EntityCategory.DIAGNOSTIC,
+            icon="mdi:air-filter",
+            translation_key="dehumidifier_filter_life",
+        ),
+        days_key="dehum_filter_days",
+        limit_key="dehum_filter_days_limit",
+        runtime_key="dehum_filter_runtime",
+        runtime_limit_key="dehum_filter_runtime_limit",
+        is_installed=lambda t: bool(t.aux_dehumidifier_status),
+    ),
+    ConsumableSensorConfig(
+        description=SensorEntityDescription(
+            key="ventilator_core_life",
+            name="Ventilator core life",
+            has_entity_name=True,
+            state_class=SensorStateClass.MEASUREMENT,
+            native_unit_of_measurement=PERCENTAGE,
+            entity_category=EntityCategory.DIAGNOSTIC,
+            icon="mdi:hvac",
+            translation_key="ventilator_core_life",
+        ),
+        days_key="ventilation_days",
+        limit_key="ventilation_days_limit",
+        is_installed=lambda t: bool(t.aux_ventilator_status or t.ct_system_cap_ventilation),
+    ),
+]
 
 
 async def async_setup_entry(
@@ -286,6 +435,27 @@ async def async_setup_entry(
                     ),
                 ),
             ]
+
+        for cfg in CONSUMABLE_SENSOR_CONFIGS:
+            if not cfg.is_installed(thermostat):
+                continue
+
+            days_limit = getattr(thermostat, cfg.limit_key, None) or 0
+            runtime_limit = getattr(thermostat, cfg.runtime_limit_key, None) or 0 if cfg.runtime_limit_key else 0
+            if days_limit <= 0 and runtime_limit <= 0:
+                continue
+
+            entities.append(
+                DaikinOneConsumableLifeSensor(
+                    description=cfg.description,
+                    data=data,
+                    thermostat=thermostat,
+                    days_key=cfg.days_key,
+                    limit_key=cfg.limit_key,
+                    runtime_key=cfg.runtime_key,
+                    runtime_limit_key=cfg.runtime_limit_key,
+                )
+            )
 
         # equipment sensors
         for equipment in thermostat.equipment.values():
@@ -963,3 +1133,67 @@ class DaikinOneEquipmentSensor[E: DaikinEquipment](DaikinOneSensor[E]):
 
     def update_entity_attributes(self) -> None:
         self._attr_native_value = self._attribute(self._device)
+
+
+class DaikinOneConsumableLifeSensor(DaikinOneEntity[DaikinThermostat], SensorEntity):
+    """Sensor reporting the remaining percentage life of an HVAC consumable."""
+
+    def __init__(
+        self,
+        description: SensorEntityDescription,
+        data: DaikinOneData,
+        thermostat: DaikinThermostat,
+        days_key: str,
+        limit_key: str,
+        runtime_key: str | None = None,
+        runtime_limit_key: str | None = None,
+    ) -> None:
+        super().__init__(data, thermostat)
+        self.entity_description = description
+        self._days_key = days_key
+        self._limit_key = limit_key
+        self._runtime_key = runtime_key
+        self._runtime_limit_key = runtime_limit_key
+
+        match data.entry.data[CONF_OPTION_ENTITY_UID_SCHEMA_VERSION_KEY]:
+            case 0:
+                name = self.entity_description.name or self.name
+                self._attr_unique_id = f"{self._device.id}-{name}"
+            case 1:
+                self._attr_unique_id = f"{self._device.id}-{self.entity_description.key}"
+            case _:
+                raise ValueError("unexpected entity uid schema version")
+
+        self.update_entity_attributes()
+
+    async def async_get_device(self) -> DaikinThermostat:
+        return self._data.daikin.get_thermostat(self._device.id)
+
+    def update_entity_attributes(self) -> None:
+        days_used = getattr(self._device, self._days_key, None)
+        days_limit = getattr(self._device, self._limit_key, None)
+
+        if days_used is None or days_limit is None or days_limit <= 0:
+            self._attr_native_value = None
+            self._attr_extra_state_attributes = {}
+            return
+
+        self._attr_native_value = round(
+            max(0.0, min(100.0, ((days_limit - days_used) / days_limit) * 100.0)),
+            1,
+        )
+
+        attrs: dict[str, Any] = {
+            "days_used": days_used,
+            "days_limit": days_limit,
+            "days_remaining": max(0, days_limit - days_used),
+        }
+        if self._runtime_key and self._runtime_limit_key:
+            runtime_used = getattr(self._device, self._runtime_key, None)
+            runtime_limit = getattr(self._device, self._runtime_limit_key, None)
+            if runtime_used is not None:
+                attrs["runtime_hours_used"] = runtime_used
+            if runtime_limit is not None:
+                attrs["runtime_hours_limit"] = runtime_limit
+
+        self._attr_extra_state_attributes = attrs

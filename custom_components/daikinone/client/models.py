@@ -218,3 +218,65 @@ class DaikinThermostat(DaikinDevice):
     air_quality_outdoor: DaikinOneAirQualitySensorOutdoor | None
     air_quality_indoor: DaikinOneAirQualitySensorIndoor | None
     equipment: dict[str, DaikinEquipment]
+
+    num_media_filters: int | None = None
+    num_electronic_filters: int | None = None
+    num_hepa_filters: int | None = None
+    num_uv_bulbs: int | None = None
+    ct_humidifier_num_pads: int | None = None
+    aux_humidifier_status: bool | None = None
+    aux_dehumidifier_status: bool | None = None
+    aux_ventilator_status: bool | None = None
+    ct_system_cap_ventilation: bool | None = None
+
+    media_air_filter_days: int | None = None
+    media_air_filter_days_limit: int | None = None
+    media_air_filter_runtime: int | None = None
+    media_air_filter_runtime_limit: int | None = None
+    media_air_filter_active: bool | None = None
+    media_air_filter_date: str | None = None
+
+    service_days: int | None = None
+    service_days_limit: int | None = None
+    service_active: bool | None = None
+    service_date: str | None = None
+
+    hum_pad_days: int | None = None
+    hum_pad_days_limit: int | None = None
+    hum_pad_runtime: int | None = None
+    hum_pad_runtime_limit: int | None = None
+    hum_pad_active: bool | None = None
+    hum_pad_date: str | None = None
+
+    uv_days: int | None = None
+    uv_days_limit: int | None = None
+    uv_runtime: int | None = None
+    uv_runtime_limit: int | None = None
+    uv_active: bool | None = None
+    uv_date: str | None = None
+
+    hepa_filter_days: int | None = None
+    hepa_filter_days_limit: int | None = None
+    hepa_filter_runtime: int | None = None
+    hepa_filter_runtime_limit: int | None = None
+    hepa_filter_active: bool | None = None
+    hepa_filter_date: str | None = None
+
+    electronic_filter_days: int | None = None
+    electronic_filter_days_limit: int | None = None
+    electronic_filter_runtime: int | None = None
+    electronic_filter_runtime_limit: int | None = None
+    electronic_filter_active: bool | None = None
+    electronic_filter_date: str | None = None
+
+    dehum_filter_days: int | None = None
+    dehum_filter_days_limit: int | None = None
+    dehum_filter_runtime: int | None = None
+    dehum_filter_runtime_limit: int | None = None
+    dehum_filter_active: bool | None = None
+    dehum_filter_date: str | None = None
+
+    ventilation_days: int | None = None
+    ventilation_days_limit: int | None = None
+    ventilation_active: bool | None = None
+    ventilation_date: str | None = None

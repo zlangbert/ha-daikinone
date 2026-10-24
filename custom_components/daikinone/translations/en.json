@@ -15,6 +15,58 @@
     }
   },
   "entity": {
+    "sensor": {
+      "media_air_filter_life": {
+        "name": "Media air filter life"
+      },
+      "service_inspection_life": {
+        "name": "Service inspection life"
+      },
+      "humidifier_pad_life": {
+        "name": "Humidifier pad life"
+      },
+      "uv_lamp_life": {
+        "name": "UV lamp life"
+      },
+      "hepa_filter_life": {
+        "name": "HEPA filter life"
+      },
+      "electronic_filter_life": {
+        "name": "Electronic filter life"
+      },
+      "dehumidifier_filter_life": {
+        "name": "Dehumidifier filter life"
+      },
+      "ventilator_core_life": {
+        "name": "Ventilator core life"
+      }
+    },
+    "binary_sensor": {
+      "media_air_filter_replacement": {
+        "name": "Media air filter replacement"
+      },
+      "service_inspection_due": {
+        "name": "Service inspection due"
+      },
+      "humidifier_pad_replacement": {
+        "name": "Humidifier pad replacement"
+      },
+      "uv_lamp_replacement": {
+        "name": "UV lamp replacement"
+      },
+      "hepa_filter_replacement": {
+        "name": "HEPA filter replacement"
+      },
+      "electronic_filter_replacement": {
+        "name": "Electronic filter replacement"
+      },
+      "dehumidifier_filter_replacement": {
+        "name": "Dehumidifier filter replacement"
+      },
+      "ventilator_core_replacement": {
+        "name": "Ventilator core replacement"
+      }
+    },
     "climate": {
       "daikinone_thermostat": {
         "state_attributes": {
