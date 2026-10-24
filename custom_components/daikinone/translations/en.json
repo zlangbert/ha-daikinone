@@ -15,6 +15,14 @@
     }
   },
   "entity": {
+    "sensor": {
+      "last_equipment_error": {
+        "name": "Last equipment error"
+      },
+      "last_system_error": {
+        "name": "Last system error"
+      }
+    },
     "climate": {
       "daikinone_thermostat": {
         "state_attributes": {

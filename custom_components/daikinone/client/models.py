@@ -1,7 +1,8 @@
 """Domain models exposed by the Daikin client to the rest of the integration."""
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 from enum import Enum, auto
+from typing import Literal
 
 from pydantic.dataclasses import dataclass
 
@@ -195,6 +196,30 @@ class DaikinThermostatFanSpeed(Enum):
         return cls.UNKNOWN
 
 
+def format_error_code(raw_code: int | None) -> str | None:
+    """Format a valid raw fault code as a two-character uppercase hexadecimal string."""
+    if raw_code is None or isinstance(raw_code, bool) or not 0 < raw_code < 255:
+        return None
+    return f"{raw_code:02X}"
+
+
+@dataclass
+class DaikinEquipmentError:
+    timestamp: datetime
+    code: str
+    raw_code: int
+    severity: Literal["critical", "minor"]
+    level: int | None
+    equipment_id: int | None
+
+
+@dataclass
+class DaikinSystemError:
+    timestamp: datetime
+    code: str
+    raw_code: int
+
+
 @dataclass
 class DaikinThermostat(DaikinDevice):
     location_id: str
@@ -218,3 +243,5 @@ class DaikinThermostat(DaikinDevice):
     air_quality_outdoor: DaikinOneAirQualitySensorOutdoor | None
     air_quality_indoor: DaikinOneAirQualitySensorIndoor | None
     equipment: dict[str, DaikinEquipment]
+    equipment_errors: list[DaikinEquipmentError] | None = None
+    system_errors: list[DaikinSystemError] | None = None

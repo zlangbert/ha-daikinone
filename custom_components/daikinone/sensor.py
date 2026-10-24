@@ -34,6 +34,11 @@ from custom_components.daikinone.client.models import (
 
 log = logging.getLogger(__name__)
 
+ACTION_PROMPT_MESSAGE = (
+    "To view errors on the thermostat, navigate to: "
+    "settings - dealer edit - begin setup - 4 system optimization - error history."
+)
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -89,6 +94,32 @@ async def async_setup_entry(
                 data=data,
                 device=thermostat,
                 attribute=lambda d: d.indoor_humidity,
+            ),
+            DaikinOneEquipmentErrorHistorySensor(
+                description=SensorEntityDescription(
+                    key="last_equipment_error",
+                    name="Last equipment error",
+                    has_entity_name=True,
+                    device_class=SensorDeviceClass.TIMESTAMP,
+                    entity_category=EntityCategory.DIAGNOSTIC,
+                    icon="mdi:alert-circle-outline",
+                    translation_key="last_equipment_error",
+                ),
+                data=data,
+                device=thermostat,
+            ),
+            DaikinOneSystemErrorHistorySensor(
+                description=SensorEntityDescription(
+                    key="last_system_error",
+                    name="Last system error",
+                    has_entity_name=True,
+                    device_class=SensorDeviceClass.TIMESTAMP,
+                    entity_category=EntityCategory.DIAGNOSTIC,
+                    icon="mdi:alert-outline",
+                    translation_key="last_system_error",
+                ),
+                data=data,
+                device=thermostat,
             ),
         ]
 
@@ -940,6 +971,86 @@ class DaikinOneThermostatSensor(DaikinOneSensor[DaikinThermostat]):
 
     def update_entity_attributes(self) -> None:
         self._attr_native_value = self._attribute(self._device)
+
+
+class DaikinOneEquipmentErrorHistorySensor(DaikinOneThermostatSensor):
+    """Timestamp sensor for the latest equipment fault and its recent history."""
+
+    def __init__(
+        self,
+        description: SensorEntityDescription,
+        data: DaikinOneData,
+        device: DaikinThermostat,
+    ) -> None:
+        super().__init__(
+            description,
+            data,
+            device,
+            attribute=lambda thermostat: (
+                thermostat.equipment_errors[0].timestamp if thermostat.equipment_errors else None
+            ),
+        )
+        self.update_entity_attributes()
+
+    def update_entity_attributes(self) -> None:
+        errors = self._device.equipment_errors or []
+        latest = errors[0] if errors else None
+        self._attr_native_value = latest.timestamp if latest else None
+        self._attr_extra_state_attributes = {
+            "latest_code": latest.code if latest else None,
+            "latest_raw_code": latest.raw_code if latest else None,
+            "latest_severity": latest.severity if latest else None,
+            "latest_level": latest.level if latest else None,
+            "latest_equipment_id": latest.equipment_id if latest else None,
+            "recent_errors": [
+                {
+                    "timestamp": error.timestamp.isoformat(),
+                    "code": error.code,
+                    "raw_code": error.raw_code,
+                    "severity": error.severity,
+                    "level": error.level,
+                    "equipment_id": error.equipment_id,
+                }
+                for error in errors
+            ],
+            "action_prompt": ACTION_PROMPT_MESSAGE,
+        }
+
+
+class DaikinOneSystemErrorHistorySensor(DaikinOneThermostatSensor):
+    """Timestamp sensor for the latest thermostat system fault and recent history."""
+
+    def __init__(
+        self,
+        description: SensorEntityDescription,
+        data: DaikinOneData,
+        device: DaikinThermostat,
+    ) -> None:
+        super().__init__(
+            description,
+            data,
+            device,
+            attribute=lambda thermostat: thermostat.system_errors[0].timestamp if thermostat.system_errors else None,
+        )
+        self.update_entity_attributes()
+
+    def update_entity_attributes(self) -> None:
+        errors = self._device.system_errors or []
+        latest = errors[0] if errors else None
+        self._attr_native_value = latest.timestamp if latest else None
+        self._attr_extra_state_attributes = {
+            "latest_code": latest.code if latest else None,
+            "latest_raw_code": latest.raw_code if latest else None,
+            "recent_errors": [
+                {
+                    "timestamp": error.timestamp.isoformat(),
+                    "code": error.code,
+                    "raw_code": error.raw_code,
+                }
+                for error in errors
+            ],
+            "action_prompt": ACTION_PROMPT_MESSAGE,
+        }
 
 
 class DaikinOneEquipmentSensor[E: DaikinEquipment](DaikinOneSensor[E]):

@@ -1,9 +1,12 @@
 """Pure functions that turn a Daikin device-data payload into domain models."""
 
+from datetime import UTC, datetime
 import logging
+from typing import Any
 
 from custom_components.daikinone.client import fields as f
 from custom_components.daikinone.client.models import (
+    DaikinEquipmentError,
     DaikinEEVCoil,
     DaikinEquipment,
     DaikinIndoorUnit,
@@ -12,6 +15,7 @@ from custom_components.daikinone.client.models import (
     DaikinOutdoorUnit,
     DaikinOutdoorUnitHeaterStatus,
     DaikinOutdoorUnitReversingValveStatus,
+    DaikinSystemError,
     DaikinThermostat,
     DaikinThermostatCapability,
     DaikinThermostatFanMode,
@@ -19,6 +23,7 @@ from custom_components.daikinone.client.models import (
     DaikinThermostatMode,
     DaikinThermostatSchedule,
     DaikinThermostatStatus,
+    format_error_code,
 )
 from custom_components.daikinone.client.wire import (
     DaikinDeviceDataResponse,
@@ -27,6 +32,84 @@ from custom_components.daikinone.client.wire import (
 )
 
 log = logging.getLogger(__name__)
+
+MIN_VALID_EPOCH_TIMESTAMP = 1_000_000_000
+MAX_VALID_EPOCH_TIMESTAMP = 253_402_300_799
+
+
+def map_equipment_errors(data: dict[str, Any], max_entries: int = 3) -> list[DaikinEquipmentError]:
+    """Map the most recent valid equipment faults from fault1Code..fault25Code."""
+    events: list[DaikinEquipmentError] = []
+
+    for index in range(1, 26):
+        raw_code = data.get(f"fault{index}Code")
+        epoch = data.get(f"fault{index}Date")
+        raw_level = data.get(f"fault{index}Level")
+        raw_equipment_id = data.get(f"fault{index}Equipment")
+
+        if not isinstance(raw_code, int) or isinstance(raw_code, bool):
+            continue
+        code = format_error_code(raw_code)
+        if code is None or not isinstance(epoch, int) or isinstance(epoch, bool):
+            continue
+        if not MIN_VALID_EPOCH_TIMESTAMP <= epoch <= MAX_VALID_EPOCH_TIMESTAMP or epoch == 4_294_967_295:
+            continue
+
+        level = (
+            raw_level
+            if isinstance(raw_level, int) and not isinstance(raw_level, bool) and raw_level in (1, 2)
+            else None
+        )
+        equipment_id = (
+            raw_equipment_id
+            if isinstance(raw_equipment_id, int)
+            and not isinstance(raw_equipment_id, bool)
+            and 0 <= raw_equipment_id <= 254
+            else None
+        )
+        severity = "critical" if level == 2 else "minor"
+
+        events.append(
+            DaikinEquipmentError(
+                timestamp=datetime.fromtimestamp(epoch, tz=UTC),
+                code=code,
+                raw_code=raw_code,
+                severity=severity,
+                level=level,
+                equipment_id=equipment_id,
+            )
+        )
+
+    events.sort(key=lambda event: event.timestamp, reverse=True)
+    return events[: max(0, max_entries)]
+
+
+def map_system_errors(data: dict[str, Any], max_entries: int = 3) -> list[DaikinSystemError]:
+    """Map the most recent valid thermostat faults from sysFault1Code..sysFault20Code."""
+    events: list[DaikinSystemError] = []
+
+    for index in range(1, 21):
+        raw_code = data.get(f"sysFault{index}Code")
+        epoch = data.get(f"sysFault{index}Date")
+
+        if not isinstance(raw_code, int) or isinstance(raw_code, bool):
+            continue
+        code = format_error_code(raw_code)
+        if code is None or not isinstance(epoch, int) or isinstance(epoch, bool):
+            continue
+        if not MIN_VALID_EPOCH_TIMESTAMP <= epoch <= MAX_VALID_EPOCH_TIMESTAMP or epoch == 4_294_967_295:
+            continue
+
+        events.append(
+            DaikinSystemError(
+                timestamp=datetime.fromtimestamp(epoch, tz=UTC),
+                code=code,
+                raw_code=raw_code,
+            )
+        )
+
+    events.sort(key=lambda event: event.timestamp, reverse=True)
+    return events[: max(0, max_entries)]
 
 
 def map_thermostat(payload: DaikinDeviceDataResponse) -> DaikinThermostat:
@@ -64,6 +147,8 @@ def map_thermostat(payload: DaikinDeviceDataResponse) -> DaikinThermostat:
         air_quality_outdoor=map_air_quality_outdoor(payload),
         air_quality_indoor=map_air_quality_indoor(payload),
         equipment=map_equipment(payload),
+        equipment_errors=map_equipment_errors(payload.data),
+        system_errors=map_system_errors(payload.data),
     )
 
 
