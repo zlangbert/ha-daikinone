@@ -9,6 +9,7 @@ MANUFACTURER = "Daikin"
 
 PLATFORMS = [
     Platform.CLIMATE,
+    Platform.NUMBER,
     Platform.SELECT,
     Platform.SENSOR,
 ]

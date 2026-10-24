@@ -107,3 +107,11 @@ class DaikinOne:
             method="PUT",
             body={"fanCirculateSpeed": fan_speed.value},
         )
+
+    async def set_thermostat_aux_heat_lockout_temp(self, thermostat_id: str, temp: float) -> None:
+        """Set auxiliary heat lockout balance point temperature."""
+        await self._transport.request(
+            url=f"{DAIKIN_API_URL_DEVICE_DATA}/{thermostat_id}",
+            method="PUT",
+            body={"auxHeatLockoutTemp": temp},
+        )

@@ -218,3 +218,4 @@ class DaikinThermostat(DaikinDevice):
     air_quality_outdoor: DaikinOneAirQualitySensorOutdoor | None
     air_quality_indoor: DaikinOneAirQualitySensorIndoor | None
     equipment: dict[str, DaikinEquipment]
+    aux_heat_lockout_temp: float | None = None
