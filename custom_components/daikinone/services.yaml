@@ -1,0 +1,56 @@
+get_schedule:
+  fields:
+    entity_id:
+      required: true
+      example: "climate.mainfloor_thermostat"
+      selector:
+        entity:
+          integration: daikinone
+          domain: climate
+
+set_schedule:
+  fields:
+    entity_id:
+      required: true
+      example: "climate.mainfloor_thermostat"
+      selector:
+        entity:
+          integration: daikinone
+          domain: climate
+    schedule_enabled:
+      required: false
+      example: true
+      selector:
+        boolean:
+    temperature_unit:
+      required: false
+      example: "°C"
+      selector:
+        select:
+          options:
+            - "°C"
+            - "°F"
+    days:
+      required: false
+      example:
+        mon:
+          - part: 1
+            enabled: true
+            start_time: "06:30"
+            heat_target: 20.0
+            cool_target: 24.0
+            label: "wake"
+          - part: 2
+            enabled: true
+            start_time: "12:45"
+            heat_target: 20.0
+            cool_target: 24.0
+            label: "afternoon"
+          - part: 3
+            enabled: true
+            start_time: "21:00"
+            heat_target: 18.0
+            cool_target: 24.0
+            label: "sleep"
+      selector:
+        object:

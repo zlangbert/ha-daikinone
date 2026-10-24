@@ -32,5 +32,39 @@
         }
       }
     }
+  },
+  "services": {
+    "get_schedule": {
+      "name": "Get thermostat schedule",
+      "description": "Retrieve the 7-day thermostat schedule from local memory in the configured temperature unit.",
+      "fields": {
+        "entity_id": {
+          "name": "Thermostat entity",
+          "description": "The climate entity of the Daikin thermostat."
+        }
+      }
+    },
+    "set_schedule": {
+      "name": "Set thermostat schedule",
+      "description": "Update one or more days and periods of the 7-day thermostat schedule in a single atomic request.",
+      "fields": {
+        "entity_id": {
+          "name": "Thermostat entity",
+          "description": "The climate entity of the Daikin thermostat."
+        },
+        "schedule_enabled": {
+          "name": "Schedule enabled",
+          "description": "Whether the thermostat schedule should be enabled."
+        },
+        "temperature_unit": {
+          "name": "Temperature unit",
+          "description": "Temperature unit for the provided setpoints (°C or °F). Defaults to the Home Assistant system unit."
+        },
+        "days": {
+          "name": "Daily schedule periods",
+          "description": "Dictionary mapping day keys (mon, tue, wed, thu, fri, sat, sun) to lists or dictionaries of up to 6 daily schedule periods."
+        }
+      }
+    }
   }
 }

@@ -14,6 +14,10 @@ from custom_components.daikinone.const import (
 )
 from custom_components.daikinone.client.client import DaikinOne
 from custom_components.daikinone.client.models import DaikinUserCredentials
+from custom_components.daikinone.services import (
+    async_register_services,
+    async_unregister_services,
+)
 
 log = logging.getLogger(__name__)
 
@@ -50,6 +54,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await data.update()
     hass.data[DOMAIN] = data
 
+    async_register_services(hass)
+
     # load platforms
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
@@ -61,6 +67,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if ok:
         hass.data.pop(DOMAIN)
+        async_unregister_services(hass)
     return ok
 
 
