@@ -1,3 +1,4 @@
+from datetime import datetime
 import logging
 from typing import Callable
 
@@ -90,6 +91,8 @@ async def async_setup_entry(
                 device=thermostat,
                 attribute=lambda d: d.indoor_humidity,
             ),
+            DaikinOneScheduleStatusSensor(data=data, device=thermostat),
+            DaikinOneScheduleResumeTimeSensor(data=data, device=thermostat),
         ]
 
         if thermostat.outdoor_temperature is not None:
@@ -963,3 +966,105 @@ class DaikinOneEquipmentSensor[E: DaikinEquipment](DaikinOneSensor[E]):
 
     def update_entity_attributes(self) -> None:
         self._attr_native_value = self._attribute(self._device)
+
+
+class DaikinOneScheduleStatusSensor(DaikinOneEntity[DaikinThermostat], SensorEntity):
+    """Sensor reporting schedule hold and override status."""
+
+    _attr_has_entity_name = True
+    _attr_translation_key = "schedule_status"
+
+    def __init__(
+        self,
+        data: DaikinOneData,
+        device: DaikinThermostat,
+        description: SensorEntityDescription | None = None,
+    ) -> None:
+        super().__init__(data, device)
+        self.entity_description = description or SensorEntityDescription(
+            key="schedule_status",
+            name="Schedule status",
+            translation_key="schedule_status",
+            has_entity_name=True,
+            device_class=SensorDeviceClass.ENUM,
+            options=["using_schedule", "temporary_hold", "permanent_hold"],
+        )
+        match data.entry.data[CONF_OPTION_ENTITY_UID_SCHEMA_VERSION_KEY]:
+            case 0:
+                self._attr_unique_id = f"{self._device.id}-Schedule Status"
+            case 1:
+                self._attr_unique_id = f"{self._device.id}-{self.entity_description.key}"
+            case _:
+                raise ValueError("unexpected entity uid schema version")
+        self.update_entity_attributes()
+
+    async def async_get_device(self) -> DaikinThermostat:
+        return self._data.daikin.get_thermostat(self._device.id)
+
+    @property
+    def native_value(self) -> str:
+        if not self._device.schedule.enabled:
+            return "permanent_hold"
+        if self._device.schedule.override:
+            return "temporary_hold"
+        return "using_schedule"
+
+    @property
+    def icon(self) -> str:
+        match self.native_value:
+            case "permanent_hold":
+                return "mdi:calendar-remove"
+            case "temporary_hold":
+                return "mdi:calendar-clock"
+            case "using_schedule":
+                return "mdi:calendar-check"
+            case _:
+                return "mdi:calendar-check"
+
+    def update_entity_attributes(self) -> None:
+        self._attr_native_value = self.native_value
+        self._attr_icon = self.icon
+
+
+class DaikinOneScheduleResumeTimeSensor(DaikinOneEntity[DaikinThermostat], SensorEntity):
+    """Sensor reporting schedule override resume time."""
+
+    _attr_has_entity_name = True
+    _attr_translation_key = "schedule_resume_time"
+    _attr_icon = "mdi:clock-end"
+
+    def __init__(
+        self,
+        data: DaikinOneData,
+        device: DaikinThermostat,
+        description: SensorEntityDescription | None = None,
+    ) -> None:
+        super().__init__(data, device)
+        self.entity_description = description or SensorEntityDescription(
+            key="schedule_resume_time",
+            name="Schedule resume time",
+            translation_key="schedule_resume_time",
+            has_entity_name=True,
+            device_class=SensorDeviceClass.TIMESTAMP,
+            icon="mdi:clock-end",
+        )
+        match data.entry.data[CONF_OPTION_ENTITY_UID_SCHEMA_VERSION_KEY]:
+            case 0:
+                self._attr_unique_id = f"{self._device.id}-Schedule Override Resume Time"
+            case 1:
+                self._attr_unique_id = f"{self._device.id}-{self.entity_description.key}"
+            case _:
+                raise ValueError("unexpected entity uid schema version")
+        self.update_entity_attributes()
+
+    async def async_get_device(self) -> DaikinThermostat:
+        return self._data.daikin.get_thermostat(self._device.id)
+
+    @property
+    def native_value(self) -> datetime | None:
+        if self._device.schedule.override and self._device.schedule.enabled:
+            return self._device.sched_resume_time
+        return None
+
+    def update_entity_attributes(self) -> None:
+        self._attr_native_value = self.native_value

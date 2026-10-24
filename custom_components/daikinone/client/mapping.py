@@ -1,5 +1,6 @@
 """Pure functions that turn a Daikin device-data payload into domain models."""
 
+from datetime import datetime, timezone
 import logging
 
 from custom_components.daikinone.client import fields as f
@@ -38,6 +39,14 @@ def map_thermostat(payload: DaikinDeviceDataResponse) -> DaikinThermostat:
     if payload.data.get("ctSystemCapEmergencyHeat"):
         capabilities.add(DaikinThermostatCapability.EMERGENCY_HEAT)
 
+    sched_resume_time_val = payload.data.get("schedResumeTime")
+    sched_resume_time = (
+        datetime.fromtimestamp(sched_resume_time_val, tz=timezone.utc)
+        if isinstance(sched_resume_time_val, (int, float)) and sched_resume_time_val > 0
+        else None
+    )
+    sched_override_duration = payload.data.get("schedOverrideDuration")
+
     return DaikinThermostat(
         id=payload.id,
         location_id=payload.locationId,
@@ -50,7 +59,10 @@ def map_thermostat(payload: DaikinDeviceDataResponse) -> DaikinThermostat:
         status=DaikinThermostatStatus(payload.data["equipmentStatus"]),
         fan_mode=DaikinThermostatFanMode(payload.data["fanCirculate"]),
         fan_speed=DaikinThermostatFanSpeed(payload.data["fanCirculateSpeed"]),
-        schedule=DaikinThermostatSchedule(enabled=payload.data["schedEnabled"]),
+        schedule=DaikinThermostatSchedule(
+            enabled=payload.data["schedEnabled"],
+            override=bool(payload.data.get("schedOverride", 0)),
+        ),
         indoor_temperature=read(payload.data, f.F_TEMP_INDOOR),
         indoor_humidity=read(payload.data, f.F_HUM_INDOOR),
         set_point_heat=read(payload.data, f.F_SETPOINT_HEAT),
@@ -64,6 +76,8 @@ def map_thermostat(payload: DaikinDeviceDataResponse) -> DaikinThermostat:
         air_quality_outdoor=map_air_quality_outdoor(payload),
         air_quality_indoor=map_air_quality_indoor(payload),
         equipment=map_equipment(payload),
+        sched_resume_time=sched_resume_time,
+        sched_override_duration=sched_override_duration,
     )
 
 

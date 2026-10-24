@@ -1,6 +1,6 @@
 """Domain models exposed by the Daikin client to the rest of the integration."""
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 from enum import Enum, auto
 
 from pydantic.dataclasses import dataclass
@@ -171,6 +171,7 @@ class DaikinThermostatStatus(Enum):
 @dataclass
 class DaikinThermostatSchedule:
     enabled: bool
+    override: bool = False
 
 
 class DaikinThermostatFanMode(Enum):
@@ -218,3 +219,5 @@ class DaikinThermostat(DaikinDevice):
     air_quality_outdoor: DaikinOneAirQualitySensorOutdoor | None
     air_quality_indoor: DaikinOneAirQualitySensorIndoor | None
     equipment: dict[str, DaikinEquipment]
+    sched_resume_time: datetime | None = None
+    sched_override_duration: int | None = None
