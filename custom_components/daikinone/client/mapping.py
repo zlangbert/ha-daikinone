@@ -6,6 +6,7 @@ from custom_components.daikinone.client import fields as f
 from custom_components.daikinone.client.models import (
     DaikinEEVCoil,
     DaikinEquipment,
+    DaikinHeatSource,
     DaikinIndoorUnit,
     DaikinOneAirQualitySensorIndoor,
     DaikinOneAirQualitySensorOutdoor,
@@ -258,3 +259,51 @@ def _map_eev_coil(payload: DaikinDeviceDataResponse) -> DaikinEEVCoil | None:
         liquid_temperature=read(payload.data, f.F_EEV_SUBCOOL_TEMP),
         suction_temperature=read(payload.data, f.F_EEV_SUCTION_TEMP),
     )
+
+
+def determine_heat_source(thermostat: DaikinThermostat) -> DaikinHeatSource:
+    """Determine the active heat source delivering heat to the space."""
+    if thermostat.status != DaikinThermostatStatus.HEATING or thermostat.mode == DaikinThermostatMode.OFF:
+        return DaikinHeatSource.NONE
+
+    furnace = thermostat.furnace
+    if furnace is not None:
+        furnace_heat = (
+            (furnace.heat_demand_current_percent or 0) > 0
+            or (furnace.heat_demand_requested_percent or 0) > 0
+            or (furnace.mode is not None and furnace.mode.lower() == "heating")
+        )
+        if furnace_heat:
+            return DaikinHeatSource.GAS
+
+    outdoor = thermostat.outdoor
+    compressor_speed = outdoor.compressor_speed_current or 0 if outdoor is not None else 0
+    compressor_idle = outdoor is None or compressor_speed == 0
+
+    air_handler = thermostat.air_handler
+    if air_handler is not None:
+        ah_heat = (
+            (air_handler.heat_demand_current_percent or 0) > 0
+            or (air_handler.heat_demand_requested_percent or 0) > 0
+            or (air_handler.mode is not None and air_handler.mode.lower() == "heating")
+        )
+        if ah_heat and compressor_idle:
+            return DaikinHeatSource.RESISTIVE
+
+    indoor = thermostat.indoor
+    indoor_airflow = indoor.current_airflow or 0 if indoor is not None else 0
+    outdoor_heat_demand = outdoor.heat_demand_percent or 0 if outdoor is not None else 0
+    is_defrost = outdoor is not None and outdoor.mode is not None and "defrost" in outdoor.mode.lower()
+    is_decel = outdoor is not None and outdoor.mode is not None and "decel" in outdoor.mode.lower()
+
+    if (
+        outdoor is not None
+        and (outdoor.heat_demand_percent is None or outdoor_heat_demand > 0)
+        and compressor_speed > 0
+        and indoor_airflow > 0
+        and not is_defrost
+        and not is_decel
+    ):
+        return DaikinHeatSource.HEAT_PUMP
+
+    return DaikinHeatSource.NONE

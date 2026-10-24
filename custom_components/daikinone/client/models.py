@@ -1,7 +1,7 @@
 """Domain models exposed by the Daikin client to the rest of the integration."""
 
 from datetime import timedelta
-from enum import Enum, auto
+from enum import Enum, StrEnum, auto
 
 from pydantic.dataclasses import dataclass
 
@@ -136,6 +136,13 @@ class DaikinEEVCoil(DaikinEquipment):
     pressure_psi: int | None
 
 
+class DaikinHeatSource(StrEnum):
+    NONE = "none"
+    HEAT_PUMP = "heat_pump"
+    GAS = "gas"
+    RESISTIVE = "resistive"
+
+
 class DaikinThermostatCapability(Enum):
     HEAT = auto()
     COOL = auto()
@@ -218,3 +225,35 @@ class DaikinThermostat(DaikinDevice):
     air_quality_outdoor: DaikinOneAirQualitySensorOutdoor | None
     air_quality_indoor: DaikinOneAirQualitySensorIndoor | None
     equipment: dict[str, DaikinEquipment]
+
+    @property
+    def outdoor(self) -> DaikinOutdoorUnit | None:
+        return next(
+            (e for e in self.equipment.values() if isinstance(e, DaikinOutdoorUnit)),
+            None,
+        )
+
+    @property
+    def furnace(self) -> DaikinIndoorUnit | None:
+        return next(
+            (e for e in self.equipment.values() if isinstance(e, DaikinIndoorUnit) and e.name == "Furnace"),
+            None,
+        )
+
+    @property
+    def air_handler(self) -> DaikinIndoorUnit | None:
+        return next(
+            (e for e in self.equipment.values() if isinstance(e, DaikinIndoorUnit) and e.name == "Air Handler"),
+            None,
+        )
+
+    @property
+    def indoor(self) -> DaikinIndoorUnit | None:
+        return (
+            self.furnace
+            or self.air_handler
+            or next(
+                (e for e in self.equipment.values() if isinstance(e, DaikinIndoorUnit)),
+                None,
+            )
+        )

@@ -289,6 +289,30 @@ class DaikinOneThermostat(DaikinOneEntity[DaikinThermostat], ClimateEntity):
     async def async_get_device(self) -> DaikinThermostat:
         return self._data.daikin.get_thermostat(self._device.id)
 
+    def _is_outdoor_defrosting(self) -> bool:
+        outdoor = self._device.outdoor
+        if outdoor is not None and outdoor.mode is not None:
+            return "defrost" in outdoor.mode.lower()
+        return False
+
+    def _is_heating_startup(self) -> bool:
+        outdoor = self._device.outdoor
+        if outdoor is not None and outdoor.mode is not None:
+            if "heating startup" in outdoor.mode.lower():
+                return True
+        indoor = self._device.indoor
+        heat_demand = 0
+        if outdoor is not None and outdoor.heat_demand_percent is not None:
+            heat_demand = outdoor.heat_demand_percent
+        elif indoor is not None and indoor.heat_demand_current_percent is not None:
+            heat_demand = indoor.heat_demand_current_percent
+        elif indoor is not None and indoor.heat_demand_requested_percent is not None:
+            heat_demand = indoor.heat_demand_requested_percent
+
+        if indoor is not None and heat_demand > 0 and (indoor.current_airflow or 0) == 0:
+            return True
+        return False
+
     def update_entity_attributes(self) -> None:
         self._attr_available = self._device.online
         self._attr_current_temperature = (
@@ -314,7 +338,12 @@ class DaikinOneThermostat(DaikinOneEntity[DaikinThermostat], ClimateEntity):
         # hvac current action
         match self._device.status:
             case DaikinThermostatStatus.HEATING:
-                self._attr_hvac_action = HVACAction.HEATING
+                if self._is_outdoor_defrosting():
+                    self._attr_hvac_action = HVACAction.DEFROSTING
+                elif self._is_heating_startup():
+                    self._attr_hvac_action = HVACAction.PREHEATING
+                else:
+                    self._attr_hvac_action = HVACAction.HEATING
             case DaikinThermostatStatus.COOLING:
                 self._attr_hvac_action = HVACAction.COOLING
             case DaikinThermostatStatus.CIRCULATING_AIR:

@@ -16,6 +16,17 @@
           }
         }
       }
+    },
+    "sensor": {
+      "heat_source": {
+        "default": "mdi:fire",
+        "state": {
+          "none": "mdi:fire-off",
+          "heat_pump": "mdi:heat-pump",
+          "gas": "mdi:fire",
+          "resistive": "mdi:radiator"
+        }
+      }
     }
   }
 }

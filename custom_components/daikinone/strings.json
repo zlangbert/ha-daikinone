@@ -1,0 +1,47 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configure Daikin One",
+        "description": "Enter your Daikin One account credentials.",
+        "data": {
+          "email": "Email",
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "auth_failed": "Authentication failed, please check your credentials and try again. Check the logs for more info."
+    }
+  },
+  "entity": {
+    "climate": {
+      "daikinone_thermostat": {
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "emergency_heat": "Emergency heat"
+            }
+          },
+          "fan_mode": {
+            "state": {
+              "always_on": "Always on",
+              "schedule": "Scheduled"
+            }
+          }
+        }
+      }
+    },
+    "sensor": {
+      "heat_source": {
+        "name": "Heat source",
+        "state": {
+          "none": "None",
+          "heat_pump": "Heat pump",
+          "gas": "Gas furnace",
+          "resistive": "Resistive"
+        }
+      }
+    }
+  }
+}
