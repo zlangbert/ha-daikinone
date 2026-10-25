@@ -1,5 +1,6 @@
 """DaikinOne orchestration: holds transport + thermostat cache, exposes the public API."""
 
+import asyncio
 import copy
 import logging
 from typing import Any
@@ -29,6 +30,7 @@ class DaikinOne:
 
     def __init__(self, creds: DaikinUserCredentials) -> None:
         self._transport = DaikinTransport(creds)
+        self._p1p2_reset_tasks: dict[str, asyncio.Task[None]] = {}
 
     async def login(self) -> bool:
         return await self._transport.login()
@@ -94,11 +96,55 @@ class DaikinOne:
 
     async def set_thermostat_fan_mode(self, thermostat_id: str, fan_mode: DaikinThermostatFanMode) -> None:
         """Set thermostat fan mode"""
+        thermostat = self.__thermostats.get(thermostat_id)
+        if thermostat is None or not thermostat.p1p2_field_setting_supported:
+            await self._transport.request(
+                url=f"{DAIKIN_API_URL_DEVICE_DATA}/{thermostat_id}",
+                method="PUT",
+                body={"fanCirculate": fan_mode.value},
+            )
+            return
+
+        existing_task = self._p1p2_reset_tasks.pop(thermostat_id, None)
+        if existing_task is not None and not existing_task.done():
+            existing_task.cancel()
+
+        sw_val = 1 if fan_mode == DaikinThermostatFanMode.ALWAYS_ON else 2
         await self._transport.request(
             url=f"{DAIKIN_API_URL_DEVICE_DATA}/{thermostat_id}",
             method="PUT",
-            body={"fanCirculate": fan_mode.value},
+            body={
+                "fanCirculate": fan_mode.value,
+                "P1P2FieldSettingModeNumber": 12,
+                "P1P2FieldSettingUnitNumChangeRequest": True,
+                "P1P2SentFieldSettingSW3": sw_val,
+                "P1P2SentFieldSettingSW6": sw_val,
+            },
         )
+
+        self._p1p2_reset_tasks[thermostat_id] = asyncio.create_task(self._reset_p1p2_field_setting(thermostat_id))
+
+    async def _reset_p1p2_field_setting(self, thermostat_id: str, delay: float = 15.0) -> None:
+        try:
+            await asyncio.sleep(delay)
+            await self._transport.request(
+                url=f"{DAIKIN_API_URL_DEVICE_DATA}/{thermostat_id}",
+                method="PUT",
+                body={
+                    "P1P2FieldSettingModeNumber": 0,
+                    "P1P2FieldSettingUnitNumChangeRequest": False,
+                    "P1P2SentFieldSettingSW3": 15,
+                    "P1P2SentFieldSettingSW6": 15,
+                },
+            )
+        except asyncio.CancelledError:
+            log.debug("Cancelled pending P1/P2 field setting reset for %s", thermostat_id)
+            raise
+        except Exception:
+            log.exception("Failed to reset P1/P2 field setting for %s", thermostat_id)
+        finally:
+            if self._p1p2_reset_tasks.get(thermostat_id) is asyncio.current_task():
+                self._p1p2_reset_tasks.pop(thermostat_id, None)
 
     async def set_thermostat_fan_speed(self, thermostat_id: str, fan_speed: DaikinThermostatFanSpeed) -> None:
         """Set thermostat fan speed"""

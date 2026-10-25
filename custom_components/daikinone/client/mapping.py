@@ -30,13 +30,20 @@ log = logging.getLogger(__name__)
 
 
 def map_thermostat(payload: DaikinDeviceDataResponse) -> DaikinThermostat:
+    d = payload.data
     capabilities: set[DaikinThermostatCapability] = set()
-    if payload.data.get("ctSystemCapHeat"):
+    if d.get("ctSystemCapHeat"):
         capabilities.add(DaikinThermostatCapability.HEAT)
-    if payload.data.get("ctSystemCapCool"):
+    if d.get("ctSystemCapCool"):
         capabilities.add(DaikinThermostatCapability.COOL)
-    if payload.data.get("ctSystemCapEmergencyHeat"):
+    if d.get("ctSystemCapEmergencyHeat"):
         capabilities.add(DaikinThermostatCapability.EMERGENCY_HEAT)
+
+    p1p2_field_setting_supported = "P1P2FieldSettingModeNumber" in d and (
+        d.get("P1P2PopulatedUnits", 0) > 0
+        or d.get("P1P2UnitType", 255) not in (0, 255)
+        or bool(d.get("P1P2IndoorUnitDataValid"))
+    )
 
     return DaikinThermostat(
         id=payload.id,
@@ -46,24 +53,25 @@ def map_thermostat(payload: DaikinDeviceDataResponse) -> DaikinThermostat:
         firmware_version=payload.firmware,
         online=payload.online,
         capabilities=capabilities,
-        mode=DaikinThermostatMode(payload.data["mode"]),
-        status=DaikinThermostatStatus(payload.data["equipmentStatus"]),
-        fan_mode=DaikinThermostatFanMode(payload.data["fanCirculate"]),
-        fan_speed=DaikinThermostatFanSpeed(payload.data["fanCirculateSpeed"]),
-        schedule=DaikinThermostatSchedule(enabled=payload.data["schedEnabled"]),
-        indoor_temperature=read(payload.data, f.F_TEMP_INDOOR),
-        indoor_humidity=read(payload.data, f.F_HUM_INDOOR),
-        set_point_heat=read(payload.data, f.F_SETPOINT_HEAT),
-        set_point_heat_min=read(payload.data, f.F_SETPOINT_HEAT_MIN),
-        set_point_heat_max=read(payload.data, f.F_SETPOINT_HEAT_MAX),
-        set_point_cool=read(payload.data, f.F_SETPOINT_COOL),
-        set_point_cool_min=read(payload.data, f.F_SETPOINT_COOL_MIN),
-        set_point_cool_max=read(payload.data, f.F_SETPOINT_COOL_MAX),
-        outdoor_temperature=read(payload.data, f.F_TEMP_OUTDOOR),
-        outdoor_humidity=read(payload.data, f.F_HUM_OUTDOOR),
+        mode=DaikinThermostatMode(d["mode"]),
+        status=DaikinThermostatStatus(d["equipmentStatus"]),
+        fan_mode=DaikinThermostatFanMode(d["fanCirculate"]),
+        fan_speed=DaikinThermostatFanSpeed(d["fanCirculateSpeed"]),
+        schedule=DaikinThermostatSchedule(enabled=d["schedEnabled"]),
+        indoor_temperature=read(d, f.F_TEMP_INDOOR),
+        indoor_humidity=read(d, f.F_HUM_INDOOR),
+        set_point_heat=read(d, f.F_SETPOINT_HEAT),
+        set_point_heat_min=read(d, f.F_SETPOINT_HEAT_MIN),
+        set_point_heat_max=read(d, f.F_SETPOINT_HEAT_MAX),
+        set_point_cool=read(d, f.F_SETPOINT_COOL),
+        set_point_cool_min=read(d, f.F_SETPOINT_COOL_MIN),
+        set_point_cool_max=read(d, f.F_SETPOINT_COOL_MAX),
+        outdoor_temperature=read(d, f.F_TEMP_OUTDOOR),
+        outdoor_humidity=read(d, f.F_HUM_OUTDOOR),
         air_quality_outdoor=map_air_quality_outdoor(payload),
         air_quality_indoor=map_air_quality_indoor(payload),
         equipment=map_equipment(payload),
+        p1p2_field_setting_supported=p1p2_field_setting_supported,
     )
 
 
