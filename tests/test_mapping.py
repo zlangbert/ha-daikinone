@@ -4,18 +4,22 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from custom_components.daikinone.client.client import DaikinOne
+from custom_components.daikinone.client.mapping import map_thermostat
 from custom_components.daikinone.client.models import (
     DaikinEEVCoil,
     DaikinIndoorUnit,
     DaikinOutdoorUnit,
     DaikinOutdoorUnitHeaterStatus,
     DaikinOutdoorUnitReversingValveStatus,
+    DaikinThermostatCapability,
     DaikinThermostatFanMode,
     DaikinThermostatFanSpeed,
     DaikinThermostatMode,
     DaikinThermostatStatus,
     DaikinUserCredentials,
 )
+from custom_components.daikinone.client.wire import DaikinDeviceDataResponse
+from custom_components.daikinone.utils import Temperature
 
 
 @pytest.fixture
@@ -216,9 +220,7 @@ class TestMappingPreservesValidFields:
         thermostat = daikin_client.get_thermostats()["device123"]
         assert thermostat.indoor_humidity is None
 
-    async def test_thermostat_still_mapped_when_equipment_fields_garbage(
-        self, daikin_client: DaikinOne
-    ) -> None:
+    async def test_thermostat_still_mapped_when_equipment_fields_garbage(self, daikin_client: DaikinOne) -> None:
         ah = {**AIR_HANDLER_DATA, "ctAHFanRequestedDemand": 255, "ctIndoorPower": 65535}
         device_data = _make_device(ah)
 
@@ -238,9 +240,7 @@ class TestEquipmentSkippedOnInvalidIdentity:
     eid is never polluted with fallback values, so entities go temporarily unavailable
     during garbage refreshes rather than being orphaned and re-registered under a new id."""
 
-    async def test_air_handler_skipped_when_serial_invalid(
-        self, daikin_client: DaikinOne
-    ) -> None:
+    async def test_air_handler_skipped_when_serial_invalid(self, daikin_client: DaikinOne) -> None:
         ah = {**AIR_HANDLER_DATA, "ctAHSerialNoCharacter1_15": "he\ufffdlo"}
         device_data = _make_device(ah)
 
@@ -302,9 +302,7 @@ class TestEquipmentUnitTypeAbsent:
     """P1/P2 mini-split payloads omit the ``ct*UnitType`` keys entirely; the mapping
     must treat that as 'equipment not present' rather than KeyError-ing on setup."""
 
-    async def test_no_equipment_mapped_when_unit_type_keys_missing(
-        self, daikin_client: DaikinOne
-    ) -> None:
+    async def test_no_equipment_mapped_when_unit_type_keys_missing(self, daikin_client: DaikinOne) -> None:
         device_data = _make_device()
         for key in ("ctAHUnitType", "ctIFCUnitType", "ctOutdoorUnitType", "ctCoilUnitType"):
             del device_data["data"][key]
@@ -316,9 +314,7 @@ class TestEquipmentUnitTypeAbsent:
         thermostat = daikin_client.get_thermostats()["device123"]
         assert thermostat.equipment == {}
 
-    async def test_partial_unit_type_keys_gate_only_their_own_equipment(
-        self, daikin_client: DaikinOne
-    ) -> None:
+    async def test_partial_unit_type_keys_gate_only_their_own_equipment(self, daikin_client: DaikinOne) -> None:
         device_data = _make_device(OUTDOOR_UNIT_DATA)
         del device_data["data"]["ctAHUnitType"]
         del device_data["data"]["ctIFCUnitType"]
@@ -339,9 +335,7 @@ class TestThermostatCapabilitiesAbsent:
     must treat missing keys as 'capability not advertised' rather than KeyError-ing
     on setup."""
 
-    async def test_no_capabilities_when_cap_keys_missing(
-        self, daikin_client: DaikinOne
-    ) -> None:
+    async def test_no_capabilities_when_cap_keys_missing(self, daikin_client: DaikinOne) -> None:
         device_data = _make_device()
         for key in ("ctSystemCapHeat", "ctSystemCapCool", "ctSystemCapEmergencyHeat"):
             del device_data["data"][key]
@@ -432,9 +426,7 @@ class TestEnumSanitization:
             mock_req.return_value = [device_data]
             await daikin_client.update()
 
-        assert (
-            daikin_client.get_thermostats()["device123"].fan_mode is DaikinThermostatFanMode.UNKNOWN
-        )
+        assert daikin_client.get_thermostats()["device123"].fan_mode is DaikinThermostatFanMode.UNKNOWN
 
     async def test_thermostat_fan_speed_sentinel_becomes_unknown(self, daikin_client: DaikinOne) -> None:
         device_data = _make_device()
@@ -444,13 +436,9 @@ class TestEnumSanitization:
             mock_req.return_value = [device_data]
             await daikin_client.update()
 
-        assert (
-            daikin_client.get_thermostats()["device123"].fan_speed is DaikinThermostatFanSpeed.UNKNOWN
-        )
+        assert daikin_client.get_thermostats()["device123"].fan_speed is DaikinThermostatFanSpeed.UNKNOWN
 
-    async def test_thermostat_enum_unexpected_value_becomes_unknown(
-        self, daikin_client: DaikinOne
-    ) -> None:
+    async def test_thermostat_enum_unexpected_value_becomes_unknown(self, daikin_client: DaikinOne) -> None:
         device_data = _make_device()
         device_data["data"]["mode"] = 99
 
@@ -460,9 +448,7 @@ class TestEnumSanitization:
 
         assert daikin_client.get_thermostats()["device123"].mode is DaikinThermostatMode.UNKNOWN
 
-    async def test_outdoor_reversing_valve_unexpected_value_becomes_unknown(
-        self, daikin_client: DaikinOne
-    ) -> None:
+    async def test_outdoor_reversing_valve_unexpected_value_becomes_unknown(self, daikin_client: DaikinOne) -> None:
         device_data = _make_device({**OUTDOOR_UNIT_DATA, "ctReversingValve": 42})
 
         with patch.object(daikin_client._transport, "request", new_callable=AsyncMock) as mock_req:
@@ -476,9 +462,7 @@ class TestEnumSanitization:
         )
         assert unit.reversing_valve is DaikinOutdoorUnitReversingValveStatus.UNKNOWN
 
-    async def test_outdoor_heater_unexpected_value_becomes_unknown(
-        self, daikin_client: DaikinOne
-    ) -> None:
+    async def test_outdoor_heater_unexpected_value_becomes_unknown(self, daikin_client: DaikinOne) -> None:
         device_data = _make_device({**OUTDOOR_UNIT_DATA, "ctCrankCaseHeaterOnOff": 42})
 
         with patch.object(daikin_client._transport, "request", new_callable=AsyncMock) as mock_req:
@@ -491,3 +475,210 @@ class TestEnumSanitization:
             if isinstance(e, DaikinOutdoorUnit)
         )
         assert unit.crank_case_heater is DaikinOutdoorUnitHeaterStatus.UNKNOWN
+
+
+class TestThermostatCapabilitiesFallback:
+    """Test heating and cooling capability fallback to P1/P2 and emergency heat guards."""
+
+    def test_heating_capability_ct_system_cap(self) -> None:
+        device_data = _make_device()
+        device_data["data"]["ctSystemCapHeat"] = True
+        device_data["data"].pop("P1P2S21HeatingCapability", None)
+        thermostat = map_thermostat(DaikinDeviceDataResponse(**device_data))
+        assert DaikinThermostatCapability.HEAT in thermostat.capabilities
+
+    def test_heating_capability_fallback_p1p2_when_ct_system_cap_absent(self) -> None:
+        device_data = _make_device()
+        device_data["data"].pop("ctSystemCapHeat", None)
+        device_data["data"]["P1P2S21HeatingCapability"] = True
+        thermostat = map_thermostat(DaikinDeviceDataResponse(**device_data))
+        assert DaikinThermostatCapability.HEAT in thermostat.capabilities
+
+    def test_heating_capability_fallback_p1p2_when_ct_system_cap_false(self) -> None:
+        device_data = _make_device()
+        device_data["data"]["ctSystemCapHeat"] = False
+        device_data["data"]["P1P2S21HeatingCapability"] = True
+        thermostat = map_thermostat(DaikinDeviceDataResponse(**device_data))
+        assert DaikinThermostatCapability.HEAT in thermostat.capabilities
+
+    def test_heating_capability_omitted_when_both_false_or_absent(self) -> None:
+        device_data = _make_device()
+        device_data["data"]["ctSystemCapHeat"] = False
+        device_data["data"]["P1P2S21HeatingCapability"] = False
+        thermostat = map_thermostat(DaikinDeviceDataResponse(**device_data))
+        assert DaikinThermostatCapability.HEAT not in thermostat.capabilities
+
+    def test_cooling_capability_ct_system_cap(self) -> None:
+        device_data = _make_device()
+        device_data["data"]["ctSystemCapCool"] = True
+        device_data["data"].pop("P1P2S21CoolingCapability", None)
+        thermostat = map_thermostat(DaikinDeviceDataResponse(**device_data))
+        assert DaikinThermostatCapability.COOL in thermostat.capabilities
+
+    def test_cooling_capability_fallback_p1p2_when_ct_system_cap_absent(self) -> None:
+        device_data = _make_device()
+        device_data["data"].pop("ctSystemCapCool", None)
+        device_data["data"]["P1P2S21CoolingCapability"] = True
+        thermostat = map_thermostat(DaikinDeviceDataResponse(**device_data))
+        assert DaikinThermostatCapability.COOL in thermostat.capabilities
+
+    def test_cooling_capability_fallback_p1p2_when_ct_system_cap_false(self) -> None:
+        device_data = _make_device()
+        device_data["data"]["ctSystemCapCool"] = False
+        device_data["data"]["P1P2S21CoolingCapability"] = True
+        thermostat = map_thermostat(DaikinDeviceDataResponse(**device_data))
+        assert DaikinThermostatCapability.COOL in thermostat.capabilities
+
+    def test_cooling_capability_omitted_when_both_false_or_absent(self) -> None:
+        device_data = _make_device()
+        device_data["data"]["ctSystemCapCool"] = False
+        device_data["data"]["P1P2S21CoolingCapability"] = False
+        thermostat = map_thermostat(DaikinDeviceDataResponse(**device_data))
+        assert DaikinThermostatCapability.COOL not in thermostat.capabilities
+
+    def test_emergency_heat_capability_when_mode_em_heat_available_true(self) -> None:
+        device_data = _make_device()
+        device_data["data"]["ctSystemCapEmergencyHeat"] = True
+        device_data["data"]["modeEmHeatAvailable"] = True
+        thermostat = map_thermostat(DaikinDeviceDataResponse(**device_data))
+        assert DaikinThermostatCapability.EMERGENCY_HEAT in thermostat.capabilities
+
+    def test_emergency_heat_capability_omitted_when_mode_em_heat_available_false(self) -> None:
+        device_data = _make_device()
+        device_data["data"]["ctSystemCapEmergencyHeat"] = True
+        device_data["data"]["modeEmHeatAvailable"] = False
+        thermostat = map_thermostat(DaikinDeviceDataResponse(**device_data))
+        assert DaikinThermostatCapability.EMERGENCY_HEAT not in thermostat.capabilities
+
+    def test_emergency_heat_capability_default_true_when_mode_em_heat_available_absent(self) -> None:
+        device_data = _make_device()
+        device_data["data"]["ctSystemCapEmergencyHeat"] = True
+        device_data["data"].pop("modeEmHeatAvailable", None)
+        thermostat = map_thermostat(DaikinDeviceDataResponse(**device_data))
+        assert DaikinThermostatCapability.EMERGENCY_HEAT in thermostat.capabilities
+
+    def test_emergency_heat_capability_omitted_when_system_cap_false(self) -> None:
+        device_data = _make_device()
+        device_data["data"]["ctSystemCapEmergencyHeat"] = False
+        device_data["data"]["modeEmHeatAvailable"] = True
+        thermostat = map_thermostat(DaikinDeviceDataResponse(**device_data))
+        assert DaikinThermostatCapability.EMERGENCY_HEAT not in thermostat.capabilities
+
+
+class TestThermostatSetpointRangeFallbacks:
+    """Test 3-tier setpoint range fallback chain: EquipProtocol* -> P1P2* -> tempSP*."""
+
+    def test_setpoint_limits_tier1_equip_protocol_precedence(self) -> None:
+        device_data = _make_device()
+        device_data["data"].update(
+            {
+                "EquipProtocolMinHeatSetpoint": 16.0,
+                "EquipProtocolMaxHeatSetpoint": 31.0,
+                "EquipProtocolMinCoolSetpoint": 18.0,
+                "EquipProtocolMaxCoolSetpoint": 30.0,
+                "P1P2MinHeatSetpoint": 100,
+                "P1P2MaxHeatSetpoint": 320,
+                "P1P2MinCoolSetpoint": 100,
+                "P1P2MaxCoolSetpoint": 320,
+                "tempSPMin": 50,
+                "tempSPMax": 350,
+            }
+        )
+        thermostat = map_thermostat(DaikinDeviceDataResponse(**device_data))
+
+        assert thermostat.set_point_heat_min is not None
+        assert thermostat.set_point_heat_min.celsius == 16.0
+        assert thermostat.set_point_heat_max is not None
+        assert thermostat.set_point_heat_max.celsius == 31.0
+
+        assert thermostat.set_point_cool_min is not None
+        assert thermostat.set_point_cool_min.celsius == 18.0
+        assert thermostat.set_point_cool_max is not None
+        assert thermostat.set_point_cool_max.celsius == 30.0
+
+    def test_setpoint_limits_tier2_p1p2_fallback_when_equip_protocol_absent(self) -> None:
+        device_data = _make_device()
+        for key in (
+            "EquipProtocolMinHeatSetpoint",
+            "EquipProtocolMaxHeatSetpoint",
+            "EquipProtocolMinCoolSetpoint",
+            "EquipProtocolMaxCoolSetpoint",
+        ):
+            device_data["data"].pop(key, None)
+
+        device_data["data"].update(
+            {
+                "P1P2MinHeatSetpoint": 500,
+                "P1P2MaxHeatSetpoint": 900,
+                "P1P2MinCoolSetpoint": 600,
+                "P1P2MaxCoolSetpoint": 850,
+                "tempSPMin": 400,
+                "tempSPMax": 950,
+            }
+        )
+        thermostat = map_thermostat(DaikinDeviceDataResponse(**device_data))
+
+        assert thermostat.set_point_heat_min is not None
+        assert thermostat.set_point_heat_min == Temperature.from_fahrenheit(50.0)
+        assert thermostat.set_point_heat_max is not None
+        assert thermostat.set_point_heat_max == Temperature.from_fahrenheit(90.0)
+
+        assert thermostat.set_point_cool_min is not None
+        assert thermostat.set_point_cool_min == Temperature.from_fahrenheit(60.0)
+        assert thermostat.set_point_cool_max is not None
+        assert thermostat.set_point_cool_max == Temperature.from_fahrenheit(85.0)
+
+    def test_setpoint_limits_tier3_tempsp_fallback_when_equip_and_p1p2_absent(self) -> None:
+        device_data = _make_device()
+        for key in (
+            "EquipProtocolMinHeatSetpoint",
+            "EquipProtocolMaxHeatSetpoint",
+            "EquipProtocolMinCoolSetpoint",
+            "EquipProtocolMaxCoolSetpoint",
+            "P1P2MinHeatSetpoint",
+            "P1P2MaxHeatSetpoint",
+            "P1P2MinCoolSetpoint",
+            "P1P2MaxCoolSetpoint",
+        ):
+            device_data["data"].pop(key, None)
+
+        device_data["data"].update(
+            {
+                "tempSPMin": 500,
+                "tempSPMax": 900,
+            }
+        )
+        thermostat = map_thermostat(DaikinDeviceDataResponse(**device_data))
+
+        assert thermostat.set_point_heat_min is not None
+        assert thermostat.set_point_heat_min == Temperature.from_fahrenheit(50.0)
+        assert thermostat.set_point_heat_max is not None
+        assert thermostat.set_point_heat_max == Temperature.from_fahrenheit(90.0)
+
+        assert thermostat.set_point_cool_min is not None
+        assert thermostat.set_point_cool_min == Temperature.from_fahrenheit(50.0)
+        assert thermostat.set_point_cool_max is not None
+        assert thermostat.set_point_cool_max == Temperature.from_fahrenheit(90.0)
+
+    def test_setpoint_limits_all_absent_returns_none(self) -> None:
+        device_data = _make_device()
+        for key in (
+            "EquipProtocolMinHeatSetpoint",
+            "EquipProtocolMaxHeatSetpoint",
+            "EquipProtocolMinCoolSetpoint",
+            "EquipProtocolMaxCoolSetpoint",
+            "P1P2MinHeatSetpoint",
+            "P1P2MaxHeatSetpoint",
+            "P1P2MinCoolSetpoint",
+            "P1P2MaxCoolSetpoint",
+            "tempSPMin",
+            "tempSPMax",
+        ):
+            device_data["data"].pop(key, None)
+
+        thermostat = map_thermostat(DaikinDeviceDataResponse(**device_data))
+
+        assert thermostat.set_point_heat_min is None
+        assert thermostat.set_point_heat_max is None
+        assert thermostat.set_point_cool_min is None
+        assert thermostat.set_point_cool_max is None

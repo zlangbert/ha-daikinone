@@ -3,6 +3,24 @@
 import logging
 
 from custom_components.daikinone.client import fields as f
+from custom_components.daikinone.client.fields import (
+    F_CAP_COOL,
+    F_CAP_EMERGENCY_HEAT,
+    F_CAP_HEAT,
+    F_MODE_EM_HEAT_AVAILABLE,
+    F_P1P2_CAP_COOL,
+    F_P1P2_CAP_HEAT,
+    F_P1P2_SETPOINT_COOL_MAX,
+    F_P1P2_SETPOINT_COOL_MIN,
+    F_P1P2_SETPOINT_HEAT_MAX,
+    F_P1P2_SETPOINT_HEAT_MIN,
+    F_SETPOINT_COOL_MAX,
+    F_SETPOINT_COOL_MIN,
+    F_SETPOINT_HEAT_MAX,
+    F_SETPOINT_HEAT_MIN,
+    F_TEMP_SP_MAX,
+    F_TEMP_SP_MIN,
+)
 from custom_components.daikinone.client.models import (
     DaikinEEVCoil,
     DaikinEquipment,
@@ -30,13 +48,19 @@ log = logging.getLogger(__name__)
 
 
 def map_thermostat(payload: DaikinDeviceDataResponse) -> DaikinThermostat:
+    d = payload.data
     capabilities: set[DaikinThermostatCapability] = set()
-    if payload.data.get("ctSystemCapHeat"):
+    if F_CAP_HEAT.read(d) or F_P1P2_CAP_HEAT.read(d):
         capabilities.add(DaikinThermostatCapability.HEAT)
-    if payload.data.get("ctSystemCapCool"):
+    if F_CAP_COOL.read(d) or F_P1P2_CAP_COOL.read(d):
         capabilities.add(DaikinThermostatCapability.COOL)
-    if payload.data.get("ctSystemCapEmergencyHeat"):
+    if F_CAP_EMERGENCY_HEAT.read(d) and F_MODE_EM_HEAT_AVAILABLE.read(d):
         capabilities.add(DaikinThermostatCapability.EMERGENCY_HEAT)
+
+    set_point_heat_max = F_SETPOINT_HEAT_MAX.read(d) or F_P1P2_SETPOINT_HEAT_MAX.read(d) or F_TEMP_SP_MAX.read(d)
+    set_point_heat_min = F_SETPOINT_HEAT_MIN.read(d) or F_P1P2_SETPOINT_HEAT_MIN.read(d) or F_TEMP_SP_MIN.read(d)
+    set_point_cool_max = F_SETPOINT_COOL_MAX.read(d) or F_P1P2_SETPOINT_COOL_MAX.read(d) or F_TEMP_SP_MAX.read(d)
+    set_point_cool_min = F_SETPOINT_COOL_MIN.read(d) or F_P1P2_SETPOINT_COOL_MIN.read(d) or F_TEMP_SP_MIN.read(d)
 
     return DaikinThermostat(
         id=payload.id,
@@ -46,21 +70,21 @@ def map_thermostat(payload: DaikinDeviceDataResponse) -> DaikinThermostat:
         firmware_version=payload.firmware,
         online=payload.online,
         capabilities=capabilities,
-        mode=DaikinThermostatMode(payload.data["mode"]),
-        status=DaikinThermostatStatus(payload.data["equipmentStatus"]),
-        fan_mode=DaikinThermostatFanMode(payload.data["fanCirculate"]),
-        fan_speed=DaikinThermostatFanSpeed(payload.data["fanCirculateSpeed"]),
-        schedule=DaikinThermostatSchedule(enabled=payload.data["schedEnabled"]),
-        indoor_temperature=read(payload.data, f.F_TEMP_INDOOR),
-        indoor_humidity=read(payload.data, f.F_HUM_INDOOR),
-        set_point_heat=read(payload.data, f.F_SETPOINT_HEAT),
-        set_point_heat_min=read(payload.data, f.F_SETPOINT_HEAT_MIN),
-        set_point_heat_max=read(payload.data, f.F_SETPOINT_HEAT_MAX),
-        set_point_cool=read(payload.data, f.F_SETPOINT_COOL),
-        set_point_cool_min=read(payload.data, f.F_SETPOINT_COOL_MIN),
-        set_point_cool_max=read(payload.data, f.F_SETPOINT_COOL_MAX),
-        outdoor_temperature=read(payload.data, f.F_TEMP_OUTDOOR),
-        outdoor_humidity=read(payload.data, f.F_HUM_OUTDOOR),
+        mode=DaikinThermostatMode(d["mode"]),
+        status=DaikinThermostatStatus(d["equipmentStatus"]),
+        fan_mode=DaikinThermostatFanMode(d["fanCirculate"]),
+        fan_speed=DaikinThermostatFanSpeed(d["fanCirculateSpeed"]),
+        schedule=DaikinThermostatSchedule(enabled=d["schedEnabled"]),
+        indoor_temperature=read(d, f.F_TEMP_INDOOR),
+        indoor_humidity=read(d, f.F_HUM_INDOOR),
+        set_point_heat=read(d, f.F_SETPOINT_HEAT),
+        set_point_heat_min=set_point_heat_min,
+        set_point_heat_max=set_point_heat_max,
+        set_point_cool=read(d, f.F_SETPOINT_COOL),
+        set_point_cool_min=set_point_cool_min,
+        set_point_cool_max=set_point_cool_max,
+        outdoor_temperature=read(d, f.F_TEMP_OUTDOOR),
+        outdoor_humidity=read(d, f.F_HUM_OUTDOOR),
         air_quality_outdoor=map_air_quality_outdoor(payload),
         air_quality_indoor=map_air_quality_indoor(payload),
         equipment=map_equipment(payload),

@@ -6,6 +6,7 @@ call without repeating the sentinel/scale/unit details at every call site.
 """
 
 from custom_components.daikinone.client.wire import (
+    BoolField,
     CelsiusField,
     FloatField,
     IntField,
@@ -30,6 +31,24 @@ F_SETPOINT_COOL_MIN = CelsiusField("EquipProtocolMinCoolSetpoint")
 F_SETPOINT_COOL_MAX = CelsiusField("EquipProtocolMaxCoolSetpoint")
 F_TEMP_OUTDOOR = CelsiusField("tempOutdoor")
 F_HUM_OUTDOOR = PercentField("humOutdoor")
+
+# Thermostat capabilities & emergency heat
+F_CAP_HEAT = BoolField("ctSystemCapHeat")
+F_CAP_COOL = BoolField("ctSystemCapCool")
+F_CAP_EMERGENCY_HEAT = BoolField("ctSystemCapEmergencyHeat")
+F_MODE_EM_HEAT_AVAILABLE = BoolField("modeEmHeatAvailable", default=True)
+
+# P1/P2 capability fallbacks
+F_P1P2_CAP_HEAT = BoolField("P1P2S21HeatingCapability")
+F_P1P2_CAP_COOL = BoolField("P1P2S21CoolingCapability")
+
+# P1/P2 and global setpoint limit fallbacks
+F_P1P2_SETPOINT_HEAT_MAX = TempField("P1P2MaxHeatSetpoint")
+F_P1P2_SETPOINT_HEAT_MIN = TempField("P1P2MinHeatSetpoint")
+F_P1P2_SETPOINT_COOL_MAX = TempField("P1P2MaxCoolSetpoint")
+F_P1P2_SETPOINT_COOL_MIN = TempField("P1P2MinCoolSetpoint")
+F_TEMP_SP_MAX = TempField("tempSPMax")
+F_TEMP_SP_MIN = TempField("tempSPMin")
 
 
 # --- Air handler field catalog ---
