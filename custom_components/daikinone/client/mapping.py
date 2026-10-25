@@ -1,6 +1,7 @@
 """Pure functions that turn a Daikin device-data payload into domain models."""
 
 import logging
+from typing import Any
 
 from custom_components.daikinone.client import fields as f
 from custom_components.daikinone.client.models import (
@@ -12,6 +13,8 @@ from custom_components.daikinone.client.models import (
     DaikinOutdoorUnit,
     DaikinOutdoorUnitHeaterStatus,
     DaikinOutdoorUnitReversingValveStatus,
+    DaikinP1P2IndoorUnit,
+    DaikinP1P2OutdoorUnit,
     DaikinThermostat,
     DaikinThermostatCapability,
     DaikinThermostatFanMode,
@@ -25,6 +28,7 @@ from custom_components.daikinone.client.wire import (
     capitalize,
     read,
 )
+from custom_components.daikinone.utils import Temperature
 
 log = logging.getLogger(__name__)
 
@@ -103,6 +107,8 @@ def map_equipment(payload: DaikinDeviceDataResponse) -> dict[str, DaikinEquipmen
         _map_furnace(payload),
         _map_outdoor_unit(payload),
         _map_eev_coil(payload),
+        *_map_p1p2_indoor_units(payload),
+        _map_p1p2_outdoor_unit(payload),
     ]
     return {u.id: u for u in units if u is not None}
 
@@ -257,4 +263,292 @@ def _map_eev_coil(payload: DaikinDeviceDataResponse) -> DaikinEEVCoil | None:
         indoor_superheat_temperature=read(payload.data, f.F_EEV_SUPERHEAT_TEMP),
         liquid_temperature=read(payload.data, f.F_EEV_SUBCOOL_TEMP),
         suction_temperature=read(payload.data, f.F_EEV_SUCTION_TEMP),
+    )
+
+
+def _clean_string(value: object | None) -> str | None:
+    if value is None:
+        return None
+    s = str(value).replace("\x00", "").strip()
+    if not s or set(s) == {"0"}:
+        return None
+    return s
+
+
+def _get_p1p2_temp(data: dict[str, Any], key: str, *valid_keys: str) -> Temperature | None:
+    if not any(bool(data.get(k)) for k in valid_keys):
+        return None
+    val = data.get(key)
+    if val is None:
+        return None
+    try:
+        return Temperature(float(val))
+    except ValueError, TypeError:
+        return None
+
+
+def _get_p1p2_int(data: dict[str, Any], key: str, *valid_keys: str, min_value: int | None = None) -> int | None:
+    if not any(bool(data.get(k)) for k in valid_keys):
+        return None
+    val = data.get(key)
+    if val is None:
+        return None
+    try:
+        ival = int(val)
+        if min_value is not None and ival < min_value:
+            return None
+        return ival
+    except ValueError, TypeError:
+        return None
+
+
+def _read_indoor_telemetry(d: dict[str, Any], suffix: str) -> dict[str, Any]:
+    return {
+        "suction_air_temperature": _get_p1p2_temp(
+            d,
+            f"P1P2IndoorSuctionAirThermistor{suffix}",
+            f"P1P2IndoorSuctionAirThermistor{suffix}Valid",
+            f"P1P2IndoorSuctionAirThermistorValid{suffix}",
+        ),
+        "discharge_air_temperature": _get_p1p2_temp(
+            d,
+            f"P1P2IndoorUnitDischargeAirThermistor{suffix}",
+            f"P1P2IndoorUnitDischargeAirThermistor{suffix}Valid",
+            f"P1P2IndoorUnitDischargeAirThermistorValid{suffix}",
+        ),
+        "liquid_pipe_temperature": _get_p1p2_temp(
+            d,
+            f"P1P2IndoorUnitHeatExchangerThermistor{suffix}",
+            f"P1P2IndoorUnitHeatExchangerThermistor{suffix}Valid",
+            f"P1P2IndoorUnitHeatExchangerThermistorValid{suffix}",
+        ),
+        "gas_pipe_temperature": _get_p1p2_temp(
+            d,
+            f"P1P2IndoorUnitHeatExchangerGasPipeThermistor{suffix}",
+            f"P1P2IndoorUnitHeatExchangerGasPipeThermistor{suffix}Valid",
+            f"P1P2IndoorUnitHeatExchangerGasPipeThermistorValid{suffix}",
+        ),
+        "eev_open_pulses": _get_p1p2_int(
+            d,
+            f"P1P2IndoorUnitEEVOpenPulses{suffix}",
+            f"P1P2IndoorUnitEEVOpenPulses{suffix}Valid",
+            f"P1P2IndoorUnitEEVOpenPulsesValid{suffix}",
+        ),
+        "energized_hours": _get_p1p2_int(
+            d,
+            f"P1P2IndoorUnitEnergizedTime{suffix}",
+            f"P1P2IndoorUnitEnergizedTime{suffix}Valid",
+            f"P1P2IndoorUnitEnergizedTimeValid{suffix}",
+        ),
+        "operating_hours": _get_p1p2_int(
+            d,
+            f"P1P2IndoorUnitOperatingTime{suffix}",
+            f"P1P2IndoorUnitOperatingTime{suffix}Valid",
+            f"P1P2IndoorUnitOperatingTimeValid{suffix}",
+        ),
+        "fan_operating_hours": _get_p1p2_int(
+            d,
+            f"P1P2IndoorUnitFanOperationTime{suffix}",
+            f"P1P2IndoorUnitFanOperationTime{suffix}Valid",
+            f"P1P2IndoorUnitFanOperationTimeValid{suffix}",
+        ),
+    }
+
+
+def _is_indoor_slot_populated(d: dict[str, Any], n: int) -> bool:
+    if bool(d.get(f"P1P2IndoorUnitDataValidUnit{n}")):
+        return True
+    if _clean_string(d.get(f"P1P2IndoorUnitModelNameManualUnit{n}")):
+        return True
+    auto_valid = bool(d.get(f"P1P2IndoorUnitModelNameUnit{n}Valid")) or bool(
+        d.get(f"P1P2IndoorUnitModelNameValidUnit{n}")
+    )
+    if auto_valid and _clean_string(d.get(f"P1P2IndoorUnitModelNameUnit{n}")):
+        return True
+    return False
+
+
+def _map_p1p2_indoor_units(payload: DaikinDeviceDataResponse) -> list[DaikinP1P2IndoorUnit]:
+    d = payload.data
+    populated_slots = [n for n in range(1, 16) if _is_indoor_slot_populated(d, n)]
+
+    if len(populated_slots) > 1:
+        results: list[DaikinP1P2IndoorUnit] = []
+        for n in populated_slots:
+            manual_model = _clean_string(d.get(f"P1P2IndoorUnitModelNameManualUnit{n}"))
+            auto_valid = bool(d.get(f"P1P2IndoorUnitModelNameUnit{n}Valid")) or bool(
+                d.get(f"P1P2IndoorUnitModelNameValidUnit{n}")
+            )
+            auto_model = _clean_string(d.get(f"P1P2IndoorUnitModelNameUnit{n}")) if auto_valid else None
+            model = manual_model or auto_model
+
+            serial = _clean_string(d.get(f"P1P2IndoorUnitSerialNumberUnit{n}")) or _clean_string(
+                d.get("P1P2IndoorUnitSerialNumberEquip")
+            )
+            eid = f"{model}-{serial}" if (model and serial) else (serial or f"{payload.id}-p1p2-indoor-{n}")
+            telemetry = _read_indoor_telemetry(d, f"Unit{n}")
+
+            results.append(
+                DaikinP1P2IndoorUnit(
+                    id=eid,
+                    thermostat_id=payload.id,
+                    name=f"Indoor Unit {n}",
+                    model=model,
+                    serial=serial,
+                    firmware_version=None,
+                    **telemetry,
+                )
+            )
+        return results
+
+    if len(populated_slots) == 1:
+        n = populated_slots[0]
+        manual_model = _clean_string(d.get(f"P1P2IndoorUnitModelNameManualUnit{n}")) or _clean_string(
+            d.get("P1P2IndoorUnitModelNameManual")
+        )
+        auto_valid_slot = bool(d.get(f"P1P2IndoorUnitModelNameUnit{n}Valid")) or bool(
+            d.get(f"P1P2IndoorUnitModelNameValidUnit{n}")
+        )
+        auto_valid_top = bool(d.get("P1P2IndoorUnitModelNameValid"))
+        auto_model = (
+            _clean_string(d.get(f"P1P2IndoorUnitModelNameUnit{n}"))
+            if auto_valid_slot
+            else (_clean_string(d.get("P1P2IndoorUnitModelName")) if auto_valid_top else None)
+        )
+        model = manual_model or auto_model
+
+        serial = (
+            _clean_string(d.get(f"P1P2IndoorUnitSerialNumberUnit{n}"))
+            or _clean_string(d.get("P1P2IndoorUnitSerialNumber"))
+            or _clean_string(d.get("P1P2IndoorUnitSerialNumberEquip"))
+        )
+        eid = f"{model}-{serial}" if (model and serial) else (serial or f"{payload.id}-p1p2-indoor")
+
+        indexed_telemetry = _read_indoor_telemetry(d, f"Unit{n}")
+        unsuffixed_telemetry = _read_indoor_telemetry(d, "")
+        telemetry = {
+            k: (indexed_telemetry[k] if indexed_telemetry[k] is not None else unsuffixed_telemetry[k])
+            for k in indexed_telemetry
+        }
+
+        return [
+            DaikinP1P2IndoorUnit(
+                id=eid,
+                thermostat_id=payload.id,
+                name="Indoor Unit",
+                model=model,
+                serial=serial,
+                firmware_version=None,
+                **telemetry,
+            )
+        ]
+
+    # 0 populated indexed slots: check top-level unsuffixed registers
+    unsuffixed_valid = bool(d.get("P1P2IndoorUnitDataValid"))
+    unsuffixed_manual = _clean_string(d.get("P1P2IndoorUnitModelNameManual"))
+    unsuffixed_auto_valid = bool(d.get("P1P2IndoorUnitModelNameValid"))
+    unsuffixed_auto = _clean_string(d.get("P1P2IndoorUnitModelName")) if unsuffixed_auto_valid else None
+    if not (unsuffixed_valid or unsuffixed_manual or unsuffixed_auto):
+        return []
+
+    model = unsuffixed_manual or unsuffixed_auto
+    serial = _clean_string(d.get("P1P2IndoorUnitSerialNumber")) or _clean_string(
+        d.get("P1P2IndoorUnitSerialNumberEquip")
+    )
+    eid = f"{model}-{serial}" if (model and serial) else (serial or f"{payload.id}-p1p2-indoor")
+    telemetry = _read_indoor_telemetry(d, "")
+
+    return [
+        DaikinP1P2IndoorUnit(
+            id=eid,
+            thermostat_id=payload.id,
+            name="Indoor Unit",
+            model=model,
+            serial=serial,
+            firmware_version=None,
+            **telemetry,
+        )
+    ]
+
+
+def _map_p1p2_outdoor_unit(payload: DaikinDeviceDataResponse) -> DaikinP1P2OutdoorUnit | None:
+    d = payload.data
+    od_data_valid = bool(d.get("P1P2OutdoorUnitDataValid"))
+
+    manual_model = _clean_string(d.get("P1P2OutdoorUnitModelNameManual"))
+    auto_model_valid = bool(d.get("P1P2OutdoorUnitModelNameValid"))
+    auto_model = _clean_string(d.get("P1P2OutdoorUnitModelName")) if auto_model_valid else None
+    model = manual_model or auto_model
+
+    if not od_data_valid and not model:
+        return None
+
+    serial = _clean_string(d.get("P1P2OutdoorUnitSerialNumber"))
+    eid = f"{model}-{serial}" if (model and serial) else (serial or f"{payload.id}-p1p2-outdoor")
+
+    if not od_data_valid:
+        return DaikinP1P2OutdoorUnit(
+            id=eid,
+            thermostat_id=payload.id,
+            name="Outdoor Unit",
+            model=model,
+            serial=serial,
+            firmware_version=None,
+        )
+
+    return DaikinP1P2OutdoorUnit(
+        id=eid,
+        thermostat_id=payload.id,
+        name="Outdoor Unit",
+        model=model,
+        serial=serial,
+        firmware_version=None,
+        air_temperature=_get_p1p2_temp(d, "P1P2OutdoorAirThermistor", "P1P2OutdoorAirThermistorValid"),
+        heat_exchanger_temperature=_get_p1p2_temp(
+            d, "P1P2OutdoorUnitHeatExchangerThermistor", "P1P2OutdoorUnitHeatExchangerThermistorValid"
+        ),
+        gas_pipe_temperature=_get_p1p2_temp(
+            d,
+            "P1P2OutdoorUnitHeatExchangerGasPipeThermistor",
+            "P1P2OutdoorUnitHeatExchangerGasPipeThermistorValid",
+        ),
+        deicer_temperature=_get_p1p2_temp(
+            d,
+            "P1P2OutdoorUnitHeatExchangerDeicerThermistor",
+            "P1P2OutdoorUnitHeatExchangerDeicerThermistorValid",
+        ),
+        discharge_pipe_temperature=_get_p1p2_temp(
+            d,
+            "P1P2OutdoorUnitDischargePipeThermistor",
+            "P1P2OutdoorUnitDischargePipeThermistorValid",
+        ),
+        liquid_pipe_temperature=_get_p1p2_temp(
+            d,
+            "P1P2OutdoorUnitLiquidPipeThermistor",
+            "P1P2OutdoorUnitLiquidPipeThermistorValid",
+        ),
+        eev_open_pulses=_get_p1p2_int(d, "P1P2OutdoorUnitEEVOpenPulses", "P1P2OutdoorUnitEEVOpenPulsesValid"),
+        operating_hours=_get_p1p2_int(d, "P1P2OutdoorUnitOperatingTime", "P1P2OutdoorUnitOperatingTimeValid"),
+        compressor_1_operating_hours=_get_p1p2_int(
+            d,
+            "P1P2OutdoorUnitCompressor1OperationTime",
+            "P1P2OutdoorUnitCompressor1OperationTimeValid",
+        ),
+        compressor_2_operating_hours=_get_p1p2_int(
+            d,
+            "P1P2OutdoorUnitCompressor2OperationTime",
+            "P1P2OutdoorUnitCompressor2OperationTimeValid",
+            min_value=1,
+        ),
+        fan_1_operating_hours=_get_p1p2_int(
+            d,
+            "P1P2OutdoorUnitFan1OperationTime",
+            "P1P2OutdoorUnitFan1OperationTimeValid",
+        ),
+        fan_2_operating_hours=_get_p1p2_int(
+            d,
+            "P1P2OutdoorUnitFan2OperationTime",
+            "P1P2OutdoorUnitFan2OperationTimeValid",
+            min_value=1,
+        ),
     )

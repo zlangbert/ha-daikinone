@@ -30,17 +30,45 @@ class DaikinEquipment(DaikinDevice):
 
 @dataclass
 class DaikinIndoorUnit(DaikinEquipment):
-    mode: str | None
-    current_airflow: int | None
-    fan_demand_requested_percent: int | None
-    fan_demand_current_percent: int | None
-    heat_demand_requested_percent: int | None
-    heat_demand_current_percent: int | None
-    cool_demand_requested_percent: int | None
-    cool_demand_current_percent: int | None
-    humidification_demand_requested_percent: int | None
-    dehumidification_demand_requested_percent: int | None
-    power_usage: float | None
+    mode: str | None = None
+    current_airflow: int | None = None
+    fan_demand_requested_percent: int | None = None
+    fan_demand_current_percent: int | None = None
+    heat_demand_requested_percent: int | None = None
+    heat_demand_current_percent: int | None = None
+    cool_demand_requested_percent: int | None = None
+    cool_demand_current_percent: int | None = None
+    humidification_demand_requested_percent: int | None = None
+    dehumidification_demand_requested_percent: int | None = None
+    power_usage: float | None = None
+
+
+@dataclass
+class DaikinP1P2IndoorUnit(DaikinIndoorUnit):
+    suction_air_temperature: Temperature | None = None
+    discharge_air_temperature: Temperature | None = None
+    liquid_pipe_temperature: Temperature | None = None
+    gas_pipe_temperature: Temperature | None = None
+    eev_open_pulses: int | None = None
+    energized_hours: int | None = None
+    operating_hours: int | None = None
+    fan_operating_hours: int | None = None
+
+
+@dataclass
+class DaikinP1P2OutdoorUnit(DaikinEquipment):
+    air_temperature: Temperature | None = None
+    heat_exchanger_temperature: Temperature | None = None
+    gas_pipe_temperature: Temperature | None = None
+    deicer_temperature: Temperature | None = None
+    discharge_pipe_temperature: Temperature | None = None
+    liquid_pipe_temperature: Temperature | None = None
+    eev_open_pulses: int | None = None
+    operating_hours: int | None = None
+    compressor_1_operating_hours: int | None = None
+    compressor_2_operating_hours: int | None = None
+    fan_1_operating_hours: int | None = None
+    fan_2_operating_hours: int | None = None
 
 
 class DaikinOutdoorUnitReversingValveStatus(Enum):
