@@ -1,32 +1,32 @@
-from enum import Enum
 import logging
+from enum import Enum
 
 from homeassistant.components.climate import (
     ClimateEntity,
     ClimateEntityDescription,
 )
 from homeassistant.components.climate.const import (
-    HVACMode,
+    ATTR_TARGET_TEMP_HIGH,
+    ATTR_TARGET_TEMP_LOW,
+    FAN_OFF,
     ClimateEntityFeature,
     HVACAction,
-    ATTR_TARGET_TEMP_LOW,
-    ATTR_TARGET_TEMP_HIGH,
-    FAN_OFF,
+    HVACMode,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import UnitOfTemperature, ATTR_TEMPERATURE
+from homeassistant.const import ATTR_TEMPERATURE, PRECISION_HALVES, UnitOfTemperature
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from custom_components.daikinone import DaikinOneData, DOMAIN
-from custom_components.daikinone.entity import DaikinOneEntity
+from custom_components.daikinone import DOMAIN, DaikinOneData
 from custom_components.daikinone.client.models import (
     DaikinThermostat,
     DaikinThermostatCapability,
+    DaikinThermostatFanMode,
     DaikinThermostatMode,
     DaikinThermostatStatus,
-    DaikinThermostatFanMode,
 )
+from custom_components.daikinone.entity import DaikinOneEntity
 from custom_components.daikinone.utils import Temperature
 
 log = logging.getLogger(__name__)
@@ -88,6 +88,7 @@ class DaikinOneThermostat(DaikinOneEntity[DaikinThermostat], ClimateEntity):
         self._attr_translation_key = "daikinone_thermostat"
         self._attr_unique_id = f"{self._device.id}-climate"
         self._attr_temperature_unit = UnitOfTemperature.CELSIUS
+        self._attr_target_temperature_step = PRECISION_HALVES
         self._attr_supported_features = (
             ClimateEntityFeature.TURN_ON
             | ClimateEntityFeature.TURN_OFF

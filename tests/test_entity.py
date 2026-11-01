@@ -103,3 +103,19 @@ class TestEntityAvailability:
 
         assert sensor.available is True
         assert sensor.native_value == 45
+
+    async def test_thermostat_target_temperature_step(self, daikin_client: DaikinOne, data: DaikinOneData) -> None:
+        from homeassistant.components.climate import ClimateEntityDescription
+
+        from custom_components.daikinone.climate import DaikinOneThermostat
+
+        with patch.object(daikin_client._transport, "request", new_callable=AsyncMock) as mock_req:
+            await _refresh(daikin_client, mock_req, _make_device(AIR_HANDLER_DATA))
+
+            thermostat = daikin_client.get_thermostats()["device123"]
+            entity = DaikinOneThermostat(
+                description=ClimateEntityDescription(key=thermostat.id, has_entity_name=True),
+                data=data,
+                thermostat=thermostat,
+            )
+            assert entity.target_temperature_step == 0.5
