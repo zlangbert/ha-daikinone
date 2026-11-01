@@ -7,6 +7,7 @@ from typing import Any
 from custom_components.daikinone.client.mapping import map_thermostat
 from custom_components.daikinone.client.models import (
     DaikinThermostat,
+    DaikinThermostatFanCirculateDuration,
     DaikinThermostatFanMode,
     DaikinThermostatFanSpeed,
     DaikinThermostatMode,
@@ -106,4 +107,54 @@ class DaikinOne:
             url=f"{DAIKIN_API_URL_DEVICE_DATA}/{thermostat_id}",
             method="PUT",
             body={"fanCirculateSpeed": fan_speed.value},
+        )
+
+    async def set_thermostat_fan_circulate_start(self, thermostat_id: str, start: int) -> None:
+        """Set fan circulation schedule start time slot (0-95)."""
+        await self._transport.request(
+            url=f"{DAIKIN_API_URL_DEVICE_DATA}/{thermostat_id}",
+            method="PUT",
+            body={"fanCirculateStart": start},
+        )
+
+    async def set_thermostat_fan_circulate_stop(self, thermostat_id: str, stop: int) -> None:
+        """Set fan circulation schedule stop time slot (0-95)."""
+        await self._transport.request(
+            url=f"{DAIKIN_API_URL_DEVICE_DATA}/{thermostat_id}",
+            method="PUT",
+            body={"fanCirculateStop": stop},
+        )
+
+    async def set_thermostat_fan_circulate_duration(
+        self, thermostat_id: str, duration: DaikinThermostatFanCirculateDuration
+    ) -> None:
+        """Set fan circulation duty cycle duration."""
+        await self._transport.request(
+            url=f"{DAIKIN_API_URL_DEVICE_DATA}/{thermostat_id}",
+            method="PUT",
+            body={"fanCirculateDuration": duration.value},
+        )
+
+    async def set_thermostat_night_mode(self, thermostat_id: str, enabled: bool) -> None:
+        """Enable or disable thermostat night mode."""
+        await self._transport.request(
+            url=f"{DAIKIN_API_URL_DEVICE_DATA}/{thermostat_id}",
+            method="PUT",
+            body={"nightModeEnabled": enabled},
+        )
+
+    async def set_thermostat_night_mode_start(self, thermostat_id: str, start: int) -> None:
+        """Set thermostat night mode start time slot (0-95)."""
+        await self._transport.request(
+            url=f"{DAIKIN_API_URL_DEVICE_DATA}/{thermostat_id}",
+            method="PUT",
+            body={"nightModeStart": start},
+        )
+
+    async def set_thermostat_night_mode_stop(self, thermostat_id: str, stop: int) -> None:
+        """Set thermostat night mode stop time slot (0-95)."""
+        await self._transport.request(
+            url=f"{DAIKIN_API_URL_DEVICE_DATA}/{thermostat_id}",
+            method="PUT",
+            body={"nightModeStop": stop},
         )

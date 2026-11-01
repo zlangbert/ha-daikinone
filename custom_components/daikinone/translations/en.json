@@ -31,6 +31,33 @@
           }
         }
       }
+    },
+    "select": {
+      "fan_speed": {
+        "name": "Fan circulation speed"
+      },
+      "fan_circulation_duty_cycle": {
+        "name": "Fan circulation duty cycle"
+      }
+    },
+    "switch": {
+      "night_mode": {
+        "name": "Night mode"
+      }
+    },
+    "time": {
+      "fan_circulation_start": {
+        "name": "Fan circulation start time"
+      },
+      "fan_circulation_stop": {
+        "name": "Fan circulation stop time"
+      },
+      "night_mode_start": {
+        "name": "Night mode start time"
+      },
+      "night_mode_stop": {
+        "name": "Night mode stop time"
+      }
     }
   }
 }
